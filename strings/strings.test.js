@@ -2,6 +2,7 @@
 require('should');
 
 const strings = require("./strings.js");
+var dots = "1....2....3....4";
 
 describe("strings", function() {
   describe("uint32mul", function() {
@@ -101,6 +102,27 @@ describe("strings", function() {
       var test = containsTests[i];
       var got = strings.contains(test[0], test[1]);
       got.should.equal(test[2], "contains("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
+    }
+  });
+
+  var containsAnyTests = [
+    ["", "", false],
+    ["", "a", false],
+    ["", "abc", false],
+    ["a", "", false],
+    ["a", "a", true],
+    ["aaa", "a", true],
+    ["abc", "xyz", false],
+    ["abc", "xcz", true],
+    ["a☺b☻c☹d", "uvw☻xyz", true],
+    ["aRegExp*", ".(|)*+?^$[]", true],
+    [dots + dots + dots, " ", false],
+  ];
+  it("containsAny", function() {
+    for (var i = 0; i < containsAnyTests.length; i++) {
+      var test = containsAnyTests[i];
+      var got = strings.containsAny(test[0], test[1]);
+      got.should.equal(test[2], "containsAny("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
     }
   });
 });

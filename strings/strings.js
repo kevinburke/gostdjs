@@ -95,6 +95,17 @@ module.exports = {
     return this.index(s, substr) >= 0;
   },
 
+  // ContainsAny reports whether any Unicode code points in chars are within s.
+  containsAny: function(s, chars) {
+    if (!isString(s)) {
+      throw new Error("not a string: " + JSON.stringify(s));
+    }
+    if (!isString(chars)) {
+      throw new Error("not a string: " + JSON.stringify(chars));
+    }
+    return this.indexAny(s, chars) >= 0;
+  },
+
   // Index returns the index of the first instance of substr in s, or -1 if
   // substr is not present in s.
   index: function(s, substr) {
@@ -137,6 +148,25 @@ module.exports = {
       }
     }
     return -1
+  },
+
+  indexAny: function(s, chars) {
+    if (!isString(s)) {
+      throw new Error("not a string: " + JSON.stringify(s));
+    }
+    if (!isString(chars)) {
+      throw new Error("not a string: " + JSON.stringify(chars));
+    }
+    if (chars.length > 0) {
+      for (var i = 0; i < s.length; i++) {
+        for (var j = 0; j < chars.length; j++) {
+          if (s[i] == chars[j]) {
+            return i;
+          }
+        }
+      }
+    }
+    return -1;
   },
 
   // IndexByte returns the index of the first instance of c in s, or -1 if c is
