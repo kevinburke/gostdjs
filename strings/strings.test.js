@@ -5,12 +5,10 @@ const strings = require("./strings.js");
 var dots = "1....2....3....4";
 
 describe("strings", function() {
-  describe("uint32mul", function() {
-    it("multiplies correctly", function() {
-      var start = 2013314400;
-      var got = strings._uint32mul(start, 16777619) + 48;
-      got.should.equal(1227497040);
-    });
+  it("uint32mul", function() {
+    var start = 2013314400;
+    var got = strings._uint32mul(start, 16777619) + 48;
+    got.should.equal(1227497040);
   });
 
   var compareTests = [
@@ -30,14 +28,12 @@ describe("strings", function() {
     ["abcdefghi", "abcdefghj", -1],
   ];
 
-  describe("compare", function() {
-    it("performs the correct comparison", function() {
-      for (var i = 0; i < compareTests.length; i++) {
-        var test = compareTests[i];
-        var got = strings.compare(test[0], test[1]);
-        got.should.equal(test[2], "compare("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
-      }
-    });
+  it("compare", function() {
+    for (var i = 0; i < compareTests.length; i++) {
+      var test = compareTests[i];
+      var got = strings.compare(test[0], test[1]);
+      got.should.equal(test[2], "compare("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
+    }
   });
 
   var containsTests = [
@@ -118,11 +114,33 @@ describe("strings", function() {
     ["aRegExp*", ".(|)*+?^$[]", true],
     [dots + dots + dots, " ", false],
   ];
+
   it("containsAny", function() {
     for (var i = 0; i < containsAnyTests.length; i++) {
       var test = containsAnyTests[i];
       var got = strings.containsAny(test[0], test[1]);
       got.should.equal(test[2], "containsAny("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
+    }
+  });
+
+  var countTests = [
+    ["", "", 1],
+    ["", "notempty", 0],
+    ["notempty", "", 9],
+    ["smaller", "not smaller", 0],
+    ["12345678987654321", "6", 2],
+    ["611161116", "6", 3],
+    ["notequal", "NotEqual", 0],
+    ["equal", "equal", 1],
+    ["abc1231231123q", "123", 3],
+    ["11111", "11", 2],
+  ];
+
+  it("count", function() {
+    for (var i = 0; i < countTests.length; i++) {
+      var test = countTests[i];
+      var got = strings.count(test[0], test[1]);
+      got.should.equal(test[2], "count("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
     }
   });
 });

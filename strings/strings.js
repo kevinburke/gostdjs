@@ -106,6 +106,30 @@ module.exports = {
     return this.indexAny(s, chars) >= 0;
   },
 
+  // Count counts the number of non-overlapping instances of substr in s. If
+  // substr is an empty string, Count returns 1 + the number of Unicode code
+  // points in s.
+  count: function(s, substr) {
+    if (!isString(s)) {
+      throw new Error("not a string: " + JSON.stringify(s));
+    }
+    if (!isString(substr)) {
+      throw new Error("not a string: " + JSON.stringify(substr));
+    }
+    if (substr === "") {
+      return s.length + 1;
+    }
+    var n = 0
+    while (true) {
+      var i = this.index(s, substr);
+      if (i === -1) {
+        return n;
+      }
+      n++;
+      s = s.slice(i+substr.length);
+    }
+  },
+
   // Index returns the index of the first instance of substr in s, or -1 if
   // substr is not present in s.
   index: function(s, substr) {
