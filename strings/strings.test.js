@@ -143,4 +143,26 @@ describe("strings", function() {
       got.should.equal(test[2], "count("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
     }
   });
+
+  var equalFoldTests = [
+    ["abc", "abc", true],
+    ["ABcd", "ABcd", true],
+    ["123abc", "123ABC", true],
+    ["αβδ", "ΑΒΔ", true],
+    ["abc", "xyz", false],
+    ["abc", "XYZ", false],
+    ["abcdefghijk", "abcdefghijX", false],
+    ["abcdefghijk", "abcdefghij\u212A", true],
+    ["abcdefghijK", "abcdefghij\u212A", true],
+    ["abcdefghijkz", "abcdefghij\u212Ay", false],
+    ["abcdefghijKz", "abcdefghij\u212Ay", false],
+  ];
+
+  it("equalFold", function() {
+    for (var i = 0; i < equalFoldTests.length; i++) {
+      var test = equalFoldTests[i];
+      var got = strings.equalFold(test[0], test[1]);
+      got.should.equal(test[2], "equalFold("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
+    }
+  })
 });

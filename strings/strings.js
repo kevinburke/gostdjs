@@ -9,12 +9,21 @@ var isString = function(val) {
   return typeof val === "string" || val instanceof String;
 }
 
+var areStrings = function(args) {
+  if (!Array.isArray(args)) {
+    throw new Error("args should be an array, got " + JSON.stringify(args));
+  }
+  for (var i = 0; i < args.length; i++) {
+    if (!isString(args[i])) {
+      throw new Error("not a string: " + JSON.stringify(args[i]));
+    }
+  }
+}
+
 // hashStr returns the hash and the appropriate multiplicative
 // factor for use in Rabin-Karp algorithm.
 var hashStr = function(sep) {
-  if (!isString(sep)) {
-    throw new Error("not a string: " + JSON.stringify(sep));
-  }
+  areStrings([sep])
   var hash = 0;
   for (var i = 0; i < sep.length; i++) {
     hash = uint32mul(hash, primeRK) + sep[i].charCodeAt(0);
@@ -69,12 +78,7 @@ module.exports = {
   // Note compare uses the Javascript notions of string equality, not the Go
   // notions.
   compare: function(a, b) {
-    if (!isString(a)) {
-      throw new Error("not a string: " + JSON.stringify(a));
-    }
-    if (!isString(b)) {
-      throw new Error("not a string: " + JSON.stringify(b));
-    }
+    areStrings([a, b])
     if (a === b) {
       return 0;
     }
@@ -86,23 +90,13 @@ module.exports = {
 
   // Contains reports whether substr is within s.
   contains: function(s, substr) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
-    }
-    if (!isString(substr)) {
-      throw new Error("not a string: " + JSON.stringify(substr));
-    }
+    areStrings([s, substr])
     return this.index(s, substr) >= 0;
   },
 
   // ContainsAny reports whether any Unicode code points in chars are within s.
   containsAny: function(s, chars) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
-    }
-    if (!isString(chars)) {
-      throw new Error("not a string: " + JSON.stringify(chars));
-    }
+    areStrings([s, chars])
     return this.indexAny(s, chars) >= 0;
   },
 
@@ -110,12 +104,7 @@ module.exports = {
   // substr is an empty string, Count returns 1 + the number of Unicode code
   // points in s.
   count: function(s, substr) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
-    }
-    if (!isString(substr)) {
-      throw new Error("not a string: " + JSON.stringify(substr));
-    }
+    areStrings([s, substr])
     if (substr === "") {
       return s.length + 1;
     }
@@ -128,6 +117,23 @@ module.exports = {
       n++;
       s = s.slice(i+substr.length);
     }
+  },
+
+  // EqualFold reports whether s and t, interpreted as UTF-8 strings, are equal
+  // under Unicode case-folding.
+  equalFold: function(s, t) {
+    areStrings([s, t]);
+    s = s.normalize();
+    t = t.normalize();
+    var cmp = s.localeCompare(t, [], {sensitivity: "base"});
+    return cmp === 0;
+  },
+
+  // Fields splits the string s around each instance of one or more consecutive
+  // white space characters, as defined by unicode.IsSpace, returning an array
+  // of substrings of s or an empty list if s contains only white space.
+  fields: function(s) {
+    areStrings([s]);
   },
 
   // Index returns the index of the first instance of substr in s, or -1 if
