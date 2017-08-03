@@ -3,6 +3,7 @@ require('should');
 
 const strings = require("./strings.js");
 var dots = "1....2....3....4";
+var faces = "☺☻☹";
 
 describe("strings", function() {
   it("uint32mul", function() {
@@ -165,4 +166,30 @@ describe("strings", function() {
       got.should.equal(test[2], "equalFold("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
     }
   })
+
+  var fieldsTests = [
+    ["", []],
+    [" ", []],
+    [" \t ", []],
+    ["\u2000", []],
+    ["  abc  ", ["abc"]],
+    ["1 2 3 4", ["1", "2", "3", "4"]],
+    ["1  2  3  4", ["1", "2", "3", "4"]],
+    ["1\t\t2\t\t3\t4", ["1", "2", "3", "4"]],
+    ["1\u20002\u20013\u20024", ["1", "2", "3", "4"]],
+    ["\u2000\u2001\u2002", []],
+    ["\n™\t™\n", ["™", "™"]],
+    ["\n\u20001™2\u2000 \u2001 ™", ["1™2", "™"]],
+    ["\n1\uFFFD \uFFFD2\u20003\uFFFD4", ["1\uFFFD", "\uFFFD2", "3\uFFFD4"]],
+    ["1\xFF\u2000\xFF2\xFF \xFF", ["1\xFF", "\xFF2\xFF", "\xFF"]],
+    [faces, [faces]],
+  ];
+
+  it("fields", function() {
+    for (var i = 0; i < fieldsTests.length; i++) {
+      var test = fieldsTests[i];
+      var got = strings.fields(test[0]);
+      got.should.eql(test[1], "fields("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+    }
+  });
 });

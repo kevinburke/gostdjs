@@ -1,13 +1,25 @@
 "use strict";
 // Package strings implements simple functions to manipulate UTF-8 encoded strings.
 
+const unicode = require("../unicode/unicode.js");
+
 // primeRK is the prime base used in Rabin-Karp algorithm.
 const primeRK = 16777619;
 const maxUint32 = Math.pow(2, 32) - 1;
 
+var asciiSpace = new Array(256);
+for (var i = 0; i < 256; i++) {
+  var c = String.fromCharCode(i);
+  if (c === '\t' || c === '\n' || c === '\v' || c === '\f' || c === '\r' || c === ' ') {
+    asciiSpace[i] = 1;
+  } else {
+    asciiSpace[i] = 0;
+  }
+}
+
 var isString = function(val) {
   return typeof val === "string" || val instanceof String;
-}
+};
 
 var areStrings = function(args) {
   if (!Array.isArray(args)) {
@@ -18,7 +30,7 @@ var areStrings = function(args) {
       throw new Error("not a string: " + JSON.stringify(args[i]));
     }
   }
-}
+};
 
 // hashStr returns the hash and the appropriate multiplicative
 // factor for use in Rabin-Karp algorithm.
@@ -39,10 +51,6 @@ var hashStr = function(sep) {
   return [hash, pow];
 }
 
-var highPart = function(x) {
-  return toUint32(x / 0x0100000000);
-}
-
 var toUint32 = function(x) {
   // the shift operator forces js to perform the internal ToUint32 (see ecmascript spec 9.6)
   return x >>> 0;
@@ -58,14 +66,14 @@ var uint32mul = function(x, y) {
   } else {
     return (high16 >>> 0) + (low16 >>> 0);
   }
-}
+};
 
 var uint32sub = function(x, y) {
   if (x > y) {
     return x - y;
   }
   return (x - y) + (maxUint32 + 1)
-}
+};
 
 module.exports = {
   _uint32mul: uint32mul,
@@ -134,6 +142,53 @@ module.exports = {
   // of substrings of s or an empty list if s contains only white space.
   fields: function(s) {
     areStrings([s]);
+    var a = [];
+    var i = 0;
+    // Skip spaces in the front of the input.
+    for (const c of s) {
+      var r = c.codePointAt(0);
+      if (!unicode.isSpace(r)) {
+        break;
+      }
+      i += c.length;
+    }
+    if (i === s.length) {
+      return []; // every char is white space
+    }
+    var fieldStart = i;
+    while (i < s.length) {
+      var c;
+      for (const c1 of s.slice(i)) { // super hack
+        c = c1;
+        break;
+      }
+      var r = c.codePointAt(0);
+      if (!unicode.isSpace(r)) {
+        i += c.length;
+        continue;
+      }
+      a.push(s.slice(fieldStart, i))
+      i += c.length;
+
+      // Skip spaces in between fields.
+      while (i < s.length) {
+        var c2;
+        for (const c3 of s.slice(i)) { // super hack
+          c2 = c3;
+          break;
+        }
+        var r2 = c2.codePointAt(0);
+        if (!unicode.isSpace(r2)) {
+          break;
+        }
+        i += c2.length;
+      }
+      fieldStart = i;
+    }
+    if (fieldStart < s.length) { // Last field might end at EOF.
+      a.push(s.slice(fieldStart));
+    }
+    return a;
   },
 
   // Index returns the index of the first instance of substr in s, or -1 if
