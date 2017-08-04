@@ -1,0 +1,517 @@
+"use strict";
+
+// Bit masks for each code point under U+0100, for fast lookup.
+var pC = 1 << 0; // a control character.
+var pP = 1 << 1; // a punctuation character.
+var pN = 1 << 2; // a numeral.
+var pS = 1 << 3; // a symbolic character.
+var pZ = 1 << 4; // a spacing character.
+var pLu = 1 << 5;// an upper-case letter.
+var pLl = 1 << 6;// a lower-case letter.
+var pp = 1 << 7; // a printable character according to Go's definition.
+var pg = pp | pZ;   // a graphical character according to the Unicode definition.
+var pLo = pLl | pLu; // a letter that is neither upper nor lower case.
+var pLmask = pLo;
+
+// Pc is the set of Unicode characters in category Pc.
+var _Pc = {
+  R16: [
+    [0x005f, 0x203f, 8160],
+    [0x2040, 0x2054, 20],
+    [0xfe33, 0xfe34, 1],
+    [0xfe4d, 0xfe4f, 1],
+    [0xff3f, 0xff3f, 1],
+  ],
+};
+
+var Digit = {
+	R16: [
+		[0x0030, 0x0039, 1],
+		[0x0660, 0x0669, 1],
+		[0x06f0, 0x06f9, 1],
+		[0x07c0, 0x07c9, 1],
+		[0x0966, 0x096f, 1],
+		[0x09e6, 0x09ef, 1],
+		[0x0a66, 0x0a6f, 1],
+		[0x0ae6, 0x0aef, 1],
+		[0x0b66, 0x0b6f, 1],
+		[0x0be6, 0x0bef, 1],
+		[0x0c66, 0x0c6f, 1],
+		[0x0ce6, 0x0cef, 1],
+		[0x0d66, 0x0d6f, 1],
+		[0x0de6, 0x0def, 1],
+		[0x0e50, 0x0e59, 1],
+		[0x0ed0, 0x0ed9, 1],
+		[0x0f20, 0x0f29, 1],
+		[0x1040, 0x1049, 1],
+		[0x1090, 0x1099, 1],
+		[0x17e0, 0x17e9, 1],
+		[0x1810, 0x1819, 1],
+		[0x1946, 0x194f, 1],
+		[0x19d0, 0x19d9, 1],
+		[0x1a80, 0x1a89, 1],
+		[0x1a90, 0x1a99, 1],
+		[0x1b50, 0x1b59, 1],
+		[0x1bb0, 0x1bb9, 1],
+		[0x1c40, 0x1c49, 1],
+		[0x1c50, 0x1c59, 1],
+		[0xa620, 0xa629, 1],
+		[0xa8d0, 0xa8d9, 1],
+		[0xa900, 0xa909, 1],
+		[0xa9d0, 0xa9d9, 1],
+		[0xa9f0, 0xa9f9, 1],
+		[0xaa50, 0xaa59, 1],
+		[0xabf0, 0xabf9, 1],
+		[0xff10, 0xff19, 1],
+	],
+	R32: [
+		[0x104a0, 0x104a9, 1],
+		[0x11066, 0x1106f, 1],
+		[0x110f0, 0x110f9, 1],
+		[0x11136, 0x1113f, 1],
+		[0x111d0, 0x111d9, 1],
+		[0x112f0, 0x112f9, 1],
+		[0x11450, 0x11459, 1],
+		[0x114d0, 0x114d9, 1],
+		[0x11650, 0x11659, 1],
+		[0x116c0, 0x116c9, 1],
+		[0x11730, 0x11739, 1],
+		[0x118e0, 0x118e9, 1],
+		[0x11c50, 0x11c59, 1],
+		[0x16a60, 0x16a69, 1],
+		[0x16b50, 0x16b59, 1],
+		[0x1d7ce, 0x1d7ff, 1],
+		[0x1e950, 0x1e959, 1],
+	],
+	latinOffset: 1,
+};
+
+var properties = {
+  0x00: pC,       // '\x00'
+  0x01: pC,       // '\x01'
+  0x02: pC,       // '\x02'
+  0x03: pC,       // '\x03'
+  0x04: pC,       // '\x04'
+  0x05: pC,       // '\x05'
+  0x06: pC,       // '\x06'
+  0x07: pC,       // '\a'
+  0x08: pC,       // '\b'
+  0x09: pC,       // '\t'
+  0x0A: pC,       // '\n'
+  0x0B: pC,       // '\v'
+  0x0C: pC,       // '\f'
+  0x0D: pC,       // '\r'
+  0x0E: pC,       // '\x0e'
+  0x0F: pC,       // '\x0f'
+  0x10: pC,       // '\x10'
+  0x11: pC,       // '\x11'
+  0x12: pC,       // '\x12'
+  0x13: pC,       // '\x13'
+  0x14: pC,       // '\x14'
+  0x15: pC,       // '\x15'
+  0x16: pC,       // '\x16'
+  0x17: pC,       // '\x17'
+  0x18: pC,       // '\x18'
+  0x19: pC,       // '\x19'
+  0x1A: pC,       // '\x1a'
+  0x1B: pC,       // '\x1b'
+  0x1C: pC,       // '\x1c'
+  0x1D: pC,       // '\x1d'
+  0x1E: pC,       // '\x1e'
+  0x1F: pC,       // '\x1f'
+  0x20: pZ | pp,  // ' '
+  0x21: pP | pp,  // '!'
+  0x22: pP | pp,  // '"'
+  0x23: pP | pp,  // '#'
+  0x24: pS | pp,  // '$'
+  0x25: pP | pp,  // '%'
+  0x26: pP | pp,  // '&'
+  0x27: pP | pp,  // '\''
+  0x28: pP | pp,  // '('
+  0x29: pP | pp,  // ')'
+  0x2A: pP | pp,  // '*'
+  0x2B: pS | pp,  // '+'
+  0x2C: pP | pp,  // ','
+  0x2D: pP | pp,  // '-'
+  0x2E: pP | pp,  // '.'
+  0x2F: pP | pp,  // '/'
+  0x30: pN | pp,  // '0'
+  0x31: pN | pp,  // '1'
+  0x32: pN | pp,  // '2'
+  0x33: pN | pp,  // '3'
+  0x34: pN | pp,  // '4'
+  0x35: pN | pp,  // '5'
+  0x36: pN | pp,  // '6'
+  0x37: pN | pp,  // '7'
+  0x38: pN | pp,  // '8'
+  0x39: pN | pp,  // '9'
+  0x3A: pP | pp,  // ':'
+  0x3B: pP | pp,  // ';'
+  0x3C: pS | pp,  // '<'
+  0x3D: pS | pp,  // '='
+  0x3E: pS | pp,  // '>'
+  0x3F: pP | pp,  // '?'
+  0x40: pP | pp,  // '@'
+  0x41: pLu | pp, // 'A'
+  0x42: pLu | pp, // 'B'
+  0x43: pLu | pp, // 'C'
+  0x44: pLu | pp, // 'D'
+  0x45: pLu | pp, // 'E'
+  0x46: pLu | pp, // 'F'
+  0x47: pLu | pp, // 'G'
+  0x48: pLu | pp, // 'H'
+  0x49: pLu | pp, // 'I'
+  0x4A: pLu | pp, // 'J'
+  0x4B: pLu | pp, // 'K'
+  0x4C: pLu | pp, // 'L'
+  0x4D: pLu | pp, // 'M'
+  0x4E: pLu | pp, // 'N'
+  0x4F: pLu | pp, // 'O'
+  0x50: pLu | pp, // 'P'
+  0x51: pLu | pp, // 'Q'
+  0x52: pLu | pp, // 'R'
+  0x53: pLu | pp, // 'S'
+  0x54: pLu | pp, // 'T'
+  0x55: pLu | pp, // 'U'
+  0x56: pLu | pp, // 'V'
+  0x57: pLu | pp, // 'W'
+  0x58: pLu | pp, // 'X'
+  0x59: pLu | pp, // 'Y'
+  0x5A: pLu | pp, // 'Z'
+  0x5B: pP | pp,  // '['
+  0x5C: pP | pp,  // '\\'
+  0x5D: pP | pp,  // ']'
+  0x5E: pS | pp,  // '^'
+  0x5F: pP | pp,  // '_'
+  0x60: pS | pp,  // '`'
+  0x61: pLl | pp, // 'a'
+  0x62: pLl | pp, // 'b'
+  0x63: pLl | pp, // 'c'
+  0x64: pLl | pp, // 'd'
+  0x65: pLl | pp, // 'e'
+  0x66: pLl | pp, // 'f'
+  0x67: pLl | pp, // 'g'
+  0x68: pLl | pp, // 'h'
+  0x69: pLl | pp, // 'i'
+  0x6A: pLl | pp, // 'j'
+  0x6B: pLl | pp, // 'k'
+  0x6C: pLl | pp, // 'l'
+  0x6D: pLl | pp, // 'm'
+  0x6E: pLl | pp, // 'n'
+  0x6F: pLl | pp, // 'o'
+  0x70: pLl | pp, // 'p'
+  0x71: pLl | pp, // 'q'
+  0x72: pLl | pp, // 'r'
+  0x73: pLl | pp, // 's'
+  0x74: pLl | pp, // 't'
+  0x75: pLl | pp, // 'u'
+  0x76: pLl | pp, // 'v'
+  0x77: pLl | pp, // 'w'
+  0x78: pLl | pp, // 'x'
+  0x79: pLl | pp, // 'y'
+  0x7A: pLl | pp, // 'z'
+  0x7B: pP | pp,  // '{'
+  0x7C: pS | pp,  // '|'
+  0x7D: pP | pp,  // '}'
+  0x7E: pS | pp,  // '~'
+  0x7F: pC,       // '\u007f'
+  0x80: pC,       // '\u0080'
+  0x81: pC,       // '\u0081'
+  0x82: pC,       // '\u0082'
+  0x83: pC,       // '\u0083'
+  0x84: pC,       // '\u0084'
+  0x85: pC,       // '\u0085'
+  0x86: pC,       // '\u0086'
+  0x87: pC,       // '\u0087'
+  0x88: pC,       // '\u0088'
+  0x89: pC,       // '\u0089'
+  0x8A: pC,       // '\u008a'
+  0x8B: pC,       // '\u008b'
+  0x8C: pC,       // '\u008c'
+  0x8D: pC,       // '\u008d'
+  0x8E: pC,       // '\u008e'
+  0x8F: pC,       // '\u008f'
+  0x90: pC,       // '\u0090'
+  0x91: pC,       // '\u0091'
+  0x92: pC,       // '\u0092'
+  0x93: pC,       // '\u0093'
+  0x94: pC,       // '\u0094'
+  0x95: pC,       // '\u0095'
+  0x96: pC,       // '\u0096'
+  0x97: pC,       // '\u0097'
+  0x98: pC,       // '\u0098'
+  0x99: pC,       // '\u0099'
+  0x9A: pC,       // '\u009a'
+  0x9B: pC,       // '\u009b'
+  0x9C: pC,       // '\u009c'
+  0x9D: pC,       // '\u009d'
+  0x9E: pC,       // '\u009e'
+  0x9F: pC,       // '\u009f'
+  0xA0: pZ,       // '\u00a0'
+  0xA1: pP | pp,  // '¡'
+  0xA2: pS | pp,  // '¢'
+  0xA3: pS | pp,  // '£'
+  0xA4: pS | pp,  // '¤'
+  0xA5: pS | pp,  // '¥'
+  0xA6: pS | pp,  // '¦'
+  0xA7: pP | pp,  // '§'
+  0xA8: pS | pp,  // '¨'
+  0xA9: pS | pp,  // '©'
+  0xAA: pLo | pp, // 'ª'
+  0xAB: pP | pp,  // '«'
+  0xAC: pS | pp,  // '¬'
+  0xAD: 0,        // '\u00ad'
+  0xAE: pS | pp,  // '®'
+  0xAF: pS | pp,  // '¯'
+  0xB0: pS | pp,  // '°'
+  0xB1: pS | pp,  // '±'
+  0xB2: pN | pp,  // '²'
+  0xB3: pN | pp,  // '³'
+  0xB4: pS | pp,  // '´'
+  0xB5: pLl | pp, // 'µ'
+  0xB6: pP | pp,  // '¶'
+  0xB7: pP | pp,  // '·'
+  0xB8: pS | pp,  // '¸'
+  0xB9: pN | pp,  // '¹'
+  0xBA: pLo | pp, // 'º'
+  0xBB: pP | pp,  // '»'
+  0xBC: pN | pp,  // '¼'
+  0xBD: pN | pp,  // '½'
+  0xBE: pN | pp,  // '¾'
+  0xBF: pP | pp,  // '¿'
+  0xC0: pLu | pp, // 'À'
+  0xC1: pLu | pp, // 'Á'
+  0xC2: pLu | pp, // 'Â'
+  0xC3: pLu | pp, // 'Ã'
+  0xC4: pLu | pp, // 'Ä'
+  0xC5: pLu | pp, // 'Å'
+  0xC6: pLu | pp, // 'Æ'
+  0xC7: pLu | pp, // 'Ç'
+  0xC8: pLu | pp, // 'È'
+  0xC9: pLu | pp, // 'É'
+  0xCA: pLu | pp, // 'Ê'
+  0xCB: pLu | pp, // 'Ë'
+  0xCC: pLu | pp, // 'Ì'
+  0xCD: pLu | pp, // 'Í'
+  0xCE: pLu | pp, // 'Î'
+  0xCF: pLu | pp, // 'Ï'
+  0xD0: pLu | pp, // 'Ð'
+  0xD1: pLu | pp, // 'Ñ'
+  0xD2: pLu | pp, // 'Ò'
+  0xD3: pLu | pp, // 'Ó'
+  0xD4: pLu | pp, // 'Ô'
+  0xD5: pLu | pp, // 'Õ'
+  0xD6: pLu | pp, // 'Ö'
+  0xD7: pS | pp,  // '×'
+  0xD8: pLu | pp, // 'Ø'
+  0xD9: pLu | pp, // 'Ù'
+  0xDA: pLu | pp, // 'Ú'
+  0xDB: pLu | pp, // 'Û'
+  0xDC: pLu | pp, // 'Ü'
+  0xDD: pLu | pp, // 'Ý'
+  0xDE: pLu | pp, // 'Þ'
+  0xDF: pLl | pp, // 'ß'
+  0xE0: pLl | pp, // 'à'
+  0xE1: pLl | pp, // 'á'
+  0xE2: pLl | pp, // 'â'
+  0xE3: pLl | pp, // 'ã'
+  0xE4: pLl | pp, // 'ä'
+  0xE5: pLl | pp, // 'å'
+  0xE6: pLl | pp, // 'æ'
+  0xE7: pLl | pp, // 'ç'
+  0xE8: pLl | pp, // 'è'
+  0xE9: pLl | pp, // 'é'
+  0xEA: pLl | pp, // 'ê'
+  0xEB: pLl | pp, // 'ë'
+  0xEC: pLl | pp, // 'ì'
+  0xED: pLl | pp, // 'í'
+  0xEE: pLl | pp, // 'î'
+  0xEF: pLl | pp, // 'ï'
+  0xF0: pLl | pp, // 'ð'
+  0xF1: pLl | pp, // 'ñ'
+  0xF2: pLl | pp, // 'ò'
+  0xF3: pLl | pp, // 'ó'
+  0xF4: pLl | pp, // 'ô'
+  0xF5: pLl | pp, // 'õ'
+  0xF6: pLl | pp, // 'ö'
+  0xF7: pS | pp,  // '÷'
+  0xF8: pLl | pp, // 'ø'
+  0xF9: pLl | pp, // 'ù'
+  0xFA: pLl | pp, // 'ú'
+  0xFB: pLl | pp, // 'û'
+  0xFC: pLl | pp, // 'ü'
+  0xFD: pLl | pp, // 'ý'
+  0xFE: pLl | pp, // 'þ'
+  0xFF: pLl | pp, // 'ÿ'
+};
+
+var WhiteSpace = {
+  R16: [
+    [0x0009, 0x000d, 1],
+    [0x0020, 0x0020, 1],
+    [0x0085, 0x0085, 1],
+    [0x00a0, 0x00a0, 1],
+    [0x1680, 0x1680, 1],
+    [0x2000, 0x200a, 1],
+    [0x2028, 0x2029, 1],
+    [0x202f, 0x202f, 1],
+    [0x205f, 0x205f, 1],
+    [0x3000, 0x3000, 1],
+  ],
+  latinOffset: 4,
+}
+
+var Upper = {
+  R16: [
+    [0x0041, 0x005a, 1],
+    [0x00c0, 0x00d6, 1],
+    [0x00d8, 0x00de, 1],
+    [0x0100, 0x0136, 2],
+    [0x0139, 0x0147, 2],
+    [0x014a, 0x0178, 2],
+    [0x0179, 0x017d, 2],
+    [0x0181, 0x0182, 1],
+    [0x0184, 0x0186, 2],
+    [0x0187, 0x0189, 2],
+    [0x018a, 0x018b, 1],
+    [0x018e, 0x0191, 1],
+    [0x0193, 0x0194, 1],
+    [0x0196, 0x0198, 1],
+    [0x019c, 0x019d, 1],
+    [0x019f, 0x01a0, 1],
+    [0x01a2, 0x01a6, 2],
+    [0x01a7, 0x01a9, 2],
+    [0x01ac, 0x01ae, 2],
+    [0x01af, 0x01b1, 2],
+    [0x01b2, 0x01b3, 1],
+    [0x01b5, 0x01b7, 2],
+    [0x01b8, 0x01bc, 4],
+    [0x01c4, 0x01cd, 3],
+    [0x01cf, 0x01db, 2],
+    [0x01de, 0x01ee, 2],
+    [0x01f1, 0x01f4, 3],
+    [0x01f6, 0x01f8, 1],
+    [0x01fa, 0x0232, 2],
+    [0x023a, 0x023b, 1],
+    [0x023d, 0x023e, 1],
+    [0x0241, 0x0243, 2],
+    [0x0244, 0x0246, 1],
+    [0x0248, 0x024e, 2],
+    [0x0370, 0x0372, 2],
+    [0x0376, 0x037f, 9],
+    [0x0386, 0x0388, 2],
+    [0x0389, 0x038a, 1],
+    [0x038c, 0x038e, 2],
+    [0x038f, 0x0391, 2],
+    [0x0392, 0x03a1, 1],
+    [0x03a3, 0x03ab, 1],
+    [0x03cf, 0x03d2, 3],
+    [0x03d3, 0x03d4, 1],
+    [0x03d8, 0x03ee, 2],
+    [0x03f4, 0x03f7, 3],
+    [0x03f9, 0x03fa, 1],
+    [0x03fd, 0x042f, 1],
+    [0x0460, 0x0480, 2],
+    [0x048a, 0x04c0, 2],
+    [0x04c1, 0x04cd, 2],
+    [0x04d0, 0x052e, 2],
+    [0x0531, 0x0556, 1],
+    [0x10a0, 0x10c5, 1],
+    [0x10c7, 0x10cd, 6],
+    [0x13a0, 0x13f5, 1],
+    [0x1e00, 0x1e94, 2],
+    [0x1e9e, 0x1efe, 2],
+    [0x1f08, 0x1f0f, 1],
+    [0x1f18, 0x1f1d, 1],
+    [0x1f28, 0x1f2f, 1],
+    [0x1f38, 0x1f3f, 1],
+    [0x1f48, 0x1f4d, 1],
+    [0x1f59, 0x1f5f, 2],
+    [0x1f68, 0x1f6f, 1],
+    [0x1fb8, 0x1fbb, 1],
+    [0x1fc8, 0x1fcb, 1],
+    [0x1fd8, 0x1fdb, 1],
+    [0x1fe8, 0x1fec, 1],
+    [0x1ff8, 0x1ffb, 1],
+    [0x2102, 0x2107, 5],
+    [0x210b, 0x210d, 1],
+    [0x2110, 0x2112, 1],
+    [0x2115, 0x2119, 4],
+    [0x211a, 0x211d, 1],
+    [0x2124, 0x212a, 2],
+    [0x212b, 0x212d, 1],
+    [0x2130, 0x2133, 1],
+    [0x213e, 0x213f, 1],
+    [0x2145, 0x2183, 62],
+    [0x2c00, 0x2c2e, 1],
+    [0x2c60, 0x2c62, 2],
+    [0x2c63, 0x2c64, 1],
+    [0x2c67, 0x2c6d, 2],
+    [0x2c6e, 0x2c70, 1],
+    [0x2c72, 0x2c75, 3],
+    [0x2c7e, 0x2c80, 1],
+    [0x2c82, 0x2ce2, 2],
+    [0x2ceb, 0x2ced, 2],
+    [0x2cf2, 0xa640, 31054],
+    [0xa642, 0xa66c, 2],
+    [0xa680, 0xa69a, 2],
+    [0xa722, 0xa72e, 2],
+    [0xa732, 0xa76e, 2],
+    [0xa779, 0xa77d, 2],
+    [0xa77e, 0xa786, 2],
+    [0xa78b, 0xa78d, 2],
+    [0xa790, 0xa792, 2],
+    [0xa796, 0xa7aa, 2],
+    [0xa7ab, 0xa7ae, 1],
+    [0xa7b0, 0xa7b4, 1],
+    [0xa7b6, 0xff21, 22379],
+    [0xff22, 0xff3a, 1],
+  ],
+  R32: [
+    [0x10400, 0x10427, 1],
+    [0x104b0, 0x104d3, 1],
+    [0x10c80, 0x10cb2, 1],
+    [0x118a0, 0x118bf, 1],
+    [0x1d400, 0x1d419, 1],
+    [0x1d434, 0x1d44d, 1],
+    [0x1d468, 0x1d481, 1],
+    [0x1d49c, 0x1d49e, 2],
+    [0x1d49f, 0x1d4a5, 3],
+    [0x1d4a6, 0x1d4a9, 3],
+    [0x1d4aa, 0x1d4ac, 1],
+    [0x1d4ae, 0x1d4b5, 1],
+    [0x1d4d0, 0x1d4e9, 1],
+    [0x1d504, 0x1d505, 1],
+    [0x1d507, 0x1d50a, 1],
+    [0x1d50d, 0x1d514, 1],
+    [0x1d516, 0x1d51c, 1],
+    [0x1d538, 0x1d539, 1],
+    [0x1d53b, 0x1d53e, 1],
+    [0x1d540, 0x1d544, 1],
+    [0x1d546, 0x1d54a, 4],
+    [0x1d54b, 0x1d550, 1],
+    [0x1d56c, 0x1d585, 1],
+    [0x1d5a0, 0x1d5b9, 1],
+    [0x1d5d4, 0x1d5ed, 1],
+    [0x1d608, 0x1d621, 1],
+    [0x1d63c, 0x1d655, 1],
+    [0x1d670, 0x1d689, 1],
+    [0x1d6a8, 0x1d6c0, 1],
+    [0x1d6e2, 0x1d6fa, 1],
+    [0x1d71c, 0x1d734, 1],
+    [0x1d756, 0x1d76e, 1],
+    [0x1d790, 0x1d7a8, 1],
+    [0x1d7ca, 0x1e900, 4406],
+    [0x1e901, 0x1e921, 1],
+  ],
+  latinOffset: 3,
+};
+
+module.exports = {
+  Digit: Digit,
+  Upper: Upper,
+  WhiteSpace: WhiteSpace,
+  properties: properties,
+  pLmask: pLmask,
+  pLu: pLu,
+};

@@ -3,6 +3,7 @@ require('should');
 
 const strings = require("./strings.js");
 const unicode = require("../unicode/unicode.js");
+const utf8 = require("../unicode/utf8/utf8.js");
 
 var dots = "1....2....3....4";
 var faces = "☺☻☹";
@@ -232,5 +233,84 @@ describe("strings", function() {
     strings.hasSuffix("abc", "dabc").should.equal(false);
     strings.hasSuffix("abc", "ac").should.equal(false);
     strings.hasSuffix("abc", "").should.equal(true);
+  });
+
+  var isValidRune = function(r) {
+    return 0xd800 > r || r > 0xe000;
+  };
+
+  const space = "\t\v\r\f\n\u0085\u00a0\u2000\u3000";
+  var not = function(f) {
+    return function(i) {
+      var result = f(i);
+      if (result === true) {
+        return false;
+      }
+      if (result === false) {
+        return true;
+      }
+      throw new Error("unknown result: " + JSON.stringify(result));
+    };
+  };
+
+  var indexFuncTests = [
+    ["", isValidRune, -1, -1],
+    ["abc", unicode.isDigit, -1, -1],
+    ["0123", unicode.isDigit, 0, 3],
+    ["a1b", unicode.isDigit, 1, 1],
+    [space, unicode.isSpace, 0, space.length - 3], // last rune in space is 3 bytes
+    ["\u0e50\u0e5212hello34\u0e50\u0e51", unicode.isDigit, 0, 18],
+    ["\u2C6F\u2C6F\u2C6F\u2C6FABCDhelloEF\u2C6F\u2C6FGH\u2C6F\u2C6F", unicode.isUpper, 0, 34],
+    // NB: This returns different results than Go, because the Unicode
+    // characters are one digit each. Changed "8" to "4" here.
+    ["12\u0e50\u0e52hello34\u0e50\u0e51", not(unicode.isDigit), 4, 12],
+
+    // tests of invalid UTF-16
+    // Changed from UTF-8 - \xc0 is a valid utf-16 encoding.
+    ["\ue0001", unicode.isDigit, 1, 1],
+    ["\ue000abc", unicode.isDigit, -1, -1],
+    ["\ud800a\ud800", isValidRune, 1, 1],
+    ["\ud800a\xd800", not(isValidRune), 0, 2],
+    ["\ue000☺\e0000", not(isValidRune), 0, 4],
+    ["\ue000☺\ue000\ue000", not(isValidRune), 0, 5],
+    ["ab\ue000a\ue000cd", not(isValidRune), 2, 4],
+    ["a\ue000\ud800cd", not(isValidRune), 1, 2],
+    ["\ud800\ud800\ud800\ud800", not(isValidRune), 0, 3],
+  ];
+
+  it("indexFunc", function() {
+    for (var i = 0; i < indexFuncTests.length; i++) {
+      var test = indexFuncTests[i];
+      var got = strings.indexFunc(test[0], test[1]);
+      got.should.eql(test[2], i.toString() + ": indexFunc("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
+
+    }
+  });
+
+  var indexRuneTests = [
+    ["", 'a', -1],
+    ["", '☺', -1],
+    ["foo", '☹', -1],
+    ["foo", 'o', 1],
+    ["foo☺bar", '☺', 3],
+    // changed from "9" because each happy face is a single utf16 code point
+    ["foo☺☻☹bar", '☹', 5],
+    ["a A x", 'A', 2],
+    ["some_text=some_value", '=', 9],
+    // changed from "3" because each happy face is a single utf16 code point
+    ["☺a", 'a', 1],
+    // changed from "4" because each happy face is a single utf16 code point
+    ["a☻☺b", '☺', 2],
+
+    // Some tests skipped here because Javascript is more permissive than Go
+  ];
+
+  it("indexRune", function() {
+    for (var i = 0; i < indexRuneTests.length; i++) {
+      var test = indexRuneTests[i];
+      var got = strings.indexRune(test[0], test[1].codePointAt(0));
+      got.should.eql(test[2], i.toString() + ": indexRune("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
+
+    }
   });
 });

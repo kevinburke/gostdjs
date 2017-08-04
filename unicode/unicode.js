@@ -1,27 +1,13 @@
 "use strict";
 
+const tables = require('./tables.js');
+
 const tabNum = '\t'.charCodeAt(0);
 const spaceNum = ' '.charCodeAt(0);
 const vNum = '\v'.charCodeAt(0);
 const feedNum = '\f'.charCodeAt(0);
 const returnNum = '\r'.charCodeAt(0);
 const newlineNum = '\n'.charCodeAt(0);
-
-var WhiteSpace = {
-  R16: [
-    [0x0009, 0x000d, 1],
-    [0x0020, 0x0020, 1],
-    [0x0085, 0x0085, 1],
-    [0x00a0, 0x00a0, 1],
-    [0x1680, 0x1680, 1],
-    [0x2000, 0x200a, 1],
-    [0x2028, 0x2029, 1],
-    [0x202f, 0x202f, 1],
-    [0x205f, 0x205f, 1],
-    [0x3000, 0x3000, 1],
-  ],
-  latinOffset: 4,
-}
 
 var is16 = function(ranges, r) {
   for (var i = 0; i < ranges.length; i++) {
@@ -33,7 +19,23 @@ var is16 = function(ranges, r) {
       return false;
     }
     if (r <= hi) {
-      return (r-lo)%stride === 0;
+      return ((r-lo)%stride) === 0;
+    }
+  }
+  return false;
+}
+
+var is32 = function(ranges, r) {
+  for (var i = 0; i < ranges.length; i++) {
+    var range_ = ranges[i]
+    var lo = range_[0];
+    var hi = range_[1];
+    var stride = range_[2];
+    if (r < lo) {
+      return false;
+    }
+    if (r <= hi) {
+      return ((r-lo)%stride) === 0;
     }
   }
   return false;
@@ -52,11 +54,25 @@ var isExcludingLatin = function(rangeTab, r) {
   return false;
 }
 
+var zero = '0'.codePointAt(0);
+var nine = '9'.codePointAt(0);
+
 var unicode = {
   maxLatin1: "\u00ff".codePointAt(0),
   maxAscii: "\u007f".codePointAt(0),
   maxRune: "\udbff\udfff".codePointAt(0),
   replacementChar: "\ufffd".codePointAt(0),
+
+  // IsDigit reports whether the rune is a decimal digit.
+  isDigit: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxLatin1) {
+      return zero <= i && i <= nine;
+    }
+    return isExcludingLatin(tables.Digit, i)
+  },
 
   // IsSpace reports whether the rune is a space character as defined by
   // Unicode's White Space property; in the Latin-1 space this is
@@ -70,8 +86,20 @@ var unicode = {
       return (i === tabNum || i === spaceNum || i === vNum || i === feedNum ||
         i === returnNum || i === newlineNum || i === 0x85 || i === 0xA0);
     }
-    return isExcludingLatin(WhiteSpace, i);
-  }
+    return isExcludingLatin(tables.WhiteSpace, i);
+  },
+
+  // IsUpper reports whether the rune is an upper case letter. i should be an
+  // integer between 0 and 2^32.
+  isUpper: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxLatin1) {
+      return (tables.properties[i]&tables.pLmask) === tables.pLu;
+    }
+    return isExcludingLatin(tables.Upper, i)
+  },
 };
 
 module.exports = unicode;

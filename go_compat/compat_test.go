@@ -24,3 +24,14 @@ func TestConvert(t *testing.T) {
 	fmt.Printf("%x\n", r1)
 	fmt.Printf("%x\n", r2)
 }
+
+func TestValidUTF16(t *testing.T) {
+	// this is supposed to be "invalid" utf16 but I suspect it isnt
+	rs := []uint16{
+		0xd800,
+		uint16('a'),
+		0xd800,
+	}
+	runes := utf16.Decode(rs)
+	fmt.Printf("%#v\n", runes)
+}

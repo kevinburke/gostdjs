@@ -75,7 +75,7 @@ var uint32sub = function(x, y) {
   return (x - y) + (maxUint32 + 1)
 };
 
-module.exports = {
+var strings = {
   _uint32mul: uint32mul,
 
   // Compare returns an integer comparing two strings lexicographically. The
@@ -99,13 +99,13 @@ module.exports = {
   // Contains reports whether substr is within s.
   contains: function(s, substr) {
     areStrings([s, substr])
-    return this.index(s, substr) >= 0;
+    return strings.index(s, substr) >= 0;
   },
 
   // ContainsAny reports whether any Unicode code points in chars are within s.
   containsAny: function(s, chars) {
     areStrings([s, chars])
-    return this.indexAny(s, chars) >= 0;
+    return strings.indexAny(s, chars) >= 0;
   },
 
   // Count counts the number of non-overlapping instances of substr in s. If
@@ -118,7 +118,7 @@ module.exports = {
     }
     var n = 0
     while (true) {
-      var i = this.index(s, substr);
+      var i = strings.index(s, substr);
       if (i === -1) {
         return n;
       }
@@ -295,6 +295,8 @@ module.exports = {
     return -1;
   },
 
+  // IndexAny returns the index of the first instance of any Unicode code point
+  // from chars in s, or -1 if no Unicode code point from chars is present in s.
   indexAny: function(s, chars) {
     if (!isString(s)) {
       throw new Error("not a string: " + JSON.stringify(s));
@@ -303,12 +305,14 @@ module.exports = {
       throw new Error("not a string: " + JSON.stringify(chars));
     }
     if (chars.length > 0) {
-      for (var i = 0; i < s.length; i++) {
-        for (var j = 0; j < chars.length; j++) {
-          if (s[i] == chars[j]) {
+      var i = 0;
+      for (const c of s) {
+        for (const d of chars) {
+          if (c === d) {
             return i;
           }
         }
+        i += c.length;
       }
     }
     return -1;
@@ -326,6 +330,54 @@ module.exports = {
     if (c.length !== 1) {
       throw new Error("c has wrong length: " + c.length);
     }
-    return this.index(s, c);
-  }
+    return strings.index(s, c);
+  },
+
+  // IndexFunc returns the index into s of the first Unicode
+  // code point satisfying f(c), or -1 if none do.
+  //
+  // Note due to UTF-16 encoding of strings that this function will return
+  // different results than the Go function.
+  indexFunc: function(s, f) {
+    return strings._indexFunc(s, f, true)
+  },
+
+  // indexFunc is the same as IndexFunc except that if
+  // truth==false, the sense of the predicate function is
+  // inverted.
+  _indexFunc: function(s, f, truth) {
+    areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("indexFunc must be passed a function")
+    }
+    if (truth !== true && truth !== false) {
+      throw new Error("indexFunc must be passed a boolean")
+    }
+    var i = 0;
+    for (const c of s) {
+      var result = f(c.codePointAt(0));
+      if (result !== true && result !== false) {
+        throw new Error("indexFunc: result of f must be a boolean")
+      }
+      if (result === truth) {
+        return i;
+      }
+      i += c.length;
+    }
+    return -1;
+  },
+
+  // IndexRune returns the index of the first instance of the Unicode code point
+  // i, or -1 if rune is not present in s.
+  //
+  // i should be an integer.
+  indexRune: function(s, i) {
+    areStrings([s]);
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    return strings.index(s, String.fromCharCode(i));
+  },
 };
+
+module.exports = strings;
