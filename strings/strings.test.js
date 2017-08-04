@@ -219,4 +219,18 @@ describe("strings", function() {
 
     }
   });
+
+  it("hasPrefix", function() {
+    strings.hasPrefix("abc", "ab").should.equal(true);
+    strings.hasPrefix("abc", "abcd").should.equal(false);
+    strings.hasPrefix("abc", "ac").should.equal(false);
+    strings.hasPrefix("abc", "").should.equal(true);
+  });
+
+  it("hasSuffix", function() {
+    strings.hasSuffix("abc", "bc").should.equal(true);
+    strings.hasSuffix("abc", "dabc").should.equal(false);
+    strings.hasSuffix("abc", "ac").should.equal(false);
+    strings.hasSuffix("abc", "").should.equal(true);
+  });
 });

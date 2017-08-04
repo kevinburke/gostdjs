@@ -244,6 +244,18 @@ module.exports = {
     return a;
   },
 
+  // HasPrefix tests whether the string s begins with prefix.
+  hasPrefix: function(s, prefix) {
+    areStrings([s, prefix]);
+    return s.length >= prefix.length && s.slice(0, prefix.length) === prefix;
+  },
+
+  // HasSuffix tests whether the string s ends with suffix.
+  hasSuffix: function(s, suffix) {
+    areStrings([s, suffix]);
+    return s.length >= suffix.length && s.slice(s.length-suffix.length) === suffix;
+  },
+
   // Index returns the index of the first instance of substr in s, or -1 if
   // substr is not present in s.
   index: function(s, substr) {
