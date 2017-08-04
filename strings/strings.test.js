@@ -313,4 +313,23 @@ describe("strings", function() {
 
     }
   });
+
+  var repeatTests = [
+    ["", "", 0],
+    ["", "", 1],
+    ["", "", 2],
+    ["-", "", 0],
+    ["-", "-", 1],
+    ["-", "----------", 10],
+    ["abc ", "abc abc abc ", 3],
+  ];
+
+  it("repeat", function() {
+    for (var i = 0; i < repeatTests.length; i++) {
+      var test = repeatTests[i];
+      var got = strings.repeat(test[0], test[2]);
+      got.should.eql(test[1], i.toString() + ": repeat("+ JSON.stringify(test[0]) + ", " + JSON.stringify(test[2])+ "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
+
+    }
+  })
 });
