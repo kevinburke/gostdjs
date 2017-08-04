@@ -191,15 +191,63 @@ module.exports = {
     return a;
   },
 
+  // FieldsFunc splits the string s at each run of Unicode code points c
+  // satisfying f(c) and returns an array of slices of s. If all code points
+  // in s satisfy f(c) or the string is empty, an empty slice is returned.
+  // FieldsFunc makes no guarantees about the order in which it calls f(c). If f
+  // does not return consistent results for a given c, FieldsFunc may crash.
+  //
+  // f will be called with a uint32 and should always return a boolean.
+  fieldsFunc: function(s, f) {
+    areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("fieldsFunc must be passed a function")
+    }
+    // First count the fields.
+    var n = 0;
+    var inField = false;
+    for (const c of s) {
+      var wasInField = inField;
+      var result = f(c.codePointAt(0));
+      if (result !== true && result !== false) {
+        throw new Error("fieldsFunc returned non-boolean value " + JSON.stringify(result));
+      }
+      inField = result === false;
+      if (inField && !wasInField) {
+        n++;
+      }
+    }
+    // Now create them.
+    var a = new Array(n);
+    var na = 0;
+    var fieldStart = -1; // Set to -1 when looking for start of field.
+    var i = 0;
+    for (const c of s) {
+      var result = f(c.codePointAt(0));
+      if (result !== true && result !== false) {
+        throw new Error("fieldsFunc returned non-boolean value " + JSON.stringify(result));
+      }
+      if (result) {
+        if (fieldStart >= 0) {
+          a[na] = s.slice(fieldStart, i);
+          na++;
+          fieldStart = -1;
+        }
+      } else if (fieldStart === -1) {
+        fieldStart = i;
+      }
+      i += c.length;
+    }
+    if (fieldStart >= 0) { // Last field might end at EOF.
+      a[na] = s.slice(fieldStart);
+    }
+    return a;
+  },
+
   // Index returns the index of the first instance of substr in s, or -1 if
   // substr is not present in s.
   index: function(s, substr) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
-    }
-    if (!isString(substr)) {
-      throw new Error("not a string: " + JSON.stringify(substr));
-    }
+    areStrings([s, substr]);
     var n = substr.length;
     if (n === 0) {
       return 0;
@@ -232,7 +280,7 @@ module.exports = {
         return i - n;
       }
     }
-    return -1
+    return -1;
   },
 
   indexAny: function(s, chars) {

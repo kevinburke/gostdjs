@@ -2,6 +2,8 @@
 require('should');
 
 const strings = require("./strings.js");
+const unicode = require("../unicode/unicode.js");
+
 var dots = "1....2....3....4";
 var faces = "☺☻☹";
 
@@ -190,6 +192,31 @@ describe("strings", function() {
       var test = fieldsTests[i];
       var got = strings.fields(test[0]);
       got.should.eql(test[1], "fields("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+    }
+  });
+
+  var fieldsFuncTests = [
+    ["", []],
+    ["XX", []],
+    ["XXhiXXX", ["hi"]],
+    ["aXXbXXXcX", ["a", "b", "c"]],
+  ];
+
+  it("fieldsFunc", function() {
+    // NB these are the fields tests
+    for (var i = 0; i < fieldsTests.length; i++) {
+      var test = fieldsTests[i];
+      var got = strings.fieldsFunc(test[0], unicode.isSpace);
+      got.should.eql(test[1], "fieldsFunc("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+
+    }
+    const x = 'X'.codePointAt(0);
+    var pred = function(c) { return c === x; }
+    for (var i = 0; i < fieldsFuncTests.length; i++) {
+      var test = fieldsFuncTests[i];
+      var got = strings.fieldsFunc(test[0], pred);
+      got.should.eql(test[1], "fieldsFunc("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+
     }
   });
 });

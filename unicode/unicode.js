@@ -52,7 +52,7 @@ var isExcludingLatin = function(rangeTab, r) {
   return false;
 }
 
-module.exports = {
+var unicode = {
   maxLatin1: "\u00ff".codePointAt(0),
   maxAscii: "\u007f".codePointAt(0),
   maxRune: "\udbff\udfff".codePointAt(0),
@@ -63,13 +63,15 @@ module.exports = {
   //
   // i should be an integer between 0 and 2^32.
   isSpace: function(i) {
-    if (!Number.isInteger(i) || i < 0 || i > this.maxRune) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
       throw new Error("Invalid rune: " + JSON.stringify(i));
     }
-    if (i <= this.maxLatin1) {
+    if (i <= unicode.maxLatin1) {
       return (i === tabNum || i === spaceNum || i === vNum || i === feedNum ||
         i === returnNum || i === newlineNum || i === 0x85 || i === 0xA0);
     }
     return isExcludingLatin(WhiteSpace, i);
   }
 };
+
+module.exports = unicode;
