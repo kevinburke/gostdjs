@@ -1,0 +1,13 @@
+language: node_js
+node_js:
+  - "node"
+  - "lts/*"
+  - "4"
+  - "6"
+  - "7"
+
+before_script:
+  - yarn add mocha should
+
+script:
+  - make ci
