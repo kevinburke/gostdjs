@@ -1,0 +1,21 @@
+load("@org_pubref_rules_node//node:rules.bzl", "node_library", "mocha_test")
+
+node_library(
+    name = "gostdjs",
+    srcs = glob(include=["**/*.js"], exclude=["bazel-*/**", "*/**/*.test.js"], exclude_directories=1),
+)
+
+mocha_test(
+    name="stdlibtests",
+    main=[
+        "strings/strings.test.js",
+        "unicode/unicode.test.js",
+        "unicode/utf8/utf8.test.js",
+    ],
+    timeout="short",
+    modules = [],
+    deps = [],
+    mocha_args = [
+        "--slow=2",
+    ]
+)
