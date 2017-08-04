@@ -378,6 +378,23 @@ var strings = {
     }
     return strings.index(s, String.fromCharCode(i));
   },
+
+  // Repeat returns a new string consisting of count copies of the string s.
+  //
+  // It throws an error if count is negative or if the result of
+  // (len(s) * count) overflows.
+  repeat: function(s, count) {
+    areStrings([s]);
+    if (!Number.isInteger(count)) {
+      throw new Error("strings: count not an integer: " + JSON.stringify(count));
+    }
+    if (count < 0) {
+      throw new Error("strings: negative Repeat count")
+    }
+
+    // this throws RangeError
+    return s.repeat(count);
+  }
 };
 
 module.exports = strings;
