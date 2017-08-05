@@ -379,6 +379,25 @@ var strings = {
     return strings.index(s, String.fromCharCode(i));
   },
 
+  // Join concatenates the elements of a to create a single string. The
+  // separator string sep is placed between elements in the resulting string.
+  join: function(a, sep) {
+    areStrings([sep]);
+    if (Array.isArray(a) === false) {
+      throw new Error("join: first argument should be an array, got: " + JSON.stringify(a));
+    }
+    if (a.length === 0) {
+      return "";
+    }
+    areStrings(a);
+    var b = a[0];
+    for (var i = 1; i < a.length; i++) {
+      b = b.concat(sep);
+      b = b.concat(a[i]);
+    }
+    return b;
+  },
+
   // Repeat returns a new string consisting of count copies of the string s.
   //
   // It throws an error if count is negative or if the result of

@@ -33,3 +33,9 @@ they don't want.
 
 I will tag new releases via Git, along with a change log, and you can use Git
 and the Github compare tool to diff changes between releases.
+
+### Performance
+
+For now performance is a secondary goal to correctness. A lot of the
+optimizations present in the Go standard library around e.g. short vs long
+strings are missing here.

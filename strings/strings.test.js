@@ -314,6 +314,11 @@ describe("strings", function() {
     }
   });
 
+  it("join", function() {
+    strings.join(["foo", "bar", "baz"], ",").should.equal("foo,bar,baz");
+    strings.join([], ",").should.equal("");
+  })
+
   var repeatTests = [
     ["", "", 0],
     ["", "", 1],
