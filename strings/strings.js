@@ -452,6 +452,31 @@ var strings = {
     return -1;
   },
 
+  // LastIndexAny returns the index of the last instance of any Unicode code
+  // point from chars in s, or -1 if no Unicode code point from chars is present
+  // in s.
+  lastIndexAny: function(s, chars) {
+    areStrings([s, chars]);
+    if (chars.length === 0) {
+      return -1;
+    }
+    // once through using the iterator, to get all of the code points.
+    var s1 = [];
+    for (const c of s) {
+      s1.push(c);
+    }
+    var i = s.length;
+    for (var j = s1.length-1; j >= 0; j--) {
+      i -= s1[j].length;
+      for (const c2 of chars) {
+        if (s1[j] === c2) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  },
+
   // Repeat returns a new string consisting of count copies of the string s.
   //
   // It throws an error if count is negative or if the result of

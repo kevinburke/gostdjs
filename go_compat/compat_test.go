@@ -35,3 +35,27 @@ func TestValidUTF16(t *testing.T) {
 	runes := utf16.Decode(rs)
 	fmt.Printf("%#v\n", runes)
 }
+
+func LastIndexAny(s, chars string) int {
+	if len(chars) > 0 {
+		for i := len(s); i > 0; {
+			r, size := utf8.DecodeLastRuneInString(s[:i])
+			i -= size
+			for _, c := range chars {
+				fmt.Println("r", r, "c", c, "i", i)
+				if r == c {
+					return i
+				}
+			}
+		}
+	}
+	return -1
+}
+
+func TestStringLength(t *testing.T) {
+	m := "012\x80bcb\x80210"
+	if l := len(m); l != 11 {
+		t.Errorf("expected str len to be 11, got %d", l)
+	}
+	fmt.Println(LastIndexAny(m, "\xffb"))
+}
