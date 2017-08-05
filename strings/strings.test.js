@@ -258,31 +258,43 @@ describe("strings", function() {
     ["abc", unicode.isDigit, -1, -1],
     ["0123", unicode.isDigit, 0, 3],
     ["a1b", unicode.isDigit, 1, 1],
-    [space, unicode.isSpace, 0, space.length - 3], // last rune in space is 3 bytes
-    ["\u0e50\u0e5212hello34\u0e50\u0e51", unicode.isDigit, 0, 18],
-    ["\u2C6F\u2C6F\u2C6F\u2C6FABCDhelloEF\u2C6F\u2C6FGH\u2C6F\u2C6F", unicode.isUpper, 0, 34],
+    // last rune in space is 1 byte. TODO add better utf-16 test here.
+    [space, unicode.isSpace, 0, space.length - 1],
+    // changed last value to 12 from 18 (3 chars of 1 byte instead of 3)
+    ["\u0e50\u0e5212hello34\u0e50\u0e51", unicode.isDigit, 0, 12],
+
+    // Changed from 34, 8 chars that are 1 byte instead of 3, skipped one
+    // backwards, so 2*7 fewer.
+    ["\u2C6F\u2C6F\u2C6F\u2C6FABCDhelloEF\u2C6F\u2C6FGH\u2C6F\u2C6F", unicode.isUpper, 0, 20],
     // NB: This returns different results than Go, because the Unicode
     // characters are one digit each. Changed "8" to "4" here.
-    ["12\u0e50\u0e52hello34\u0e50\u0e51", not(unicode.isDigit), 4, 12],
+    ["12\u0e50\u0e52hello34\u0e50\u0e51", not(unicode.isDigit), 4, 8],
 
     // tests of invalid UTF-16
     // Changed from UTF-8 - \xc0 is a valid utf-16 encoding.
     ["\ue0001", unicode.isDigit, 1, 1],
     ["\ue000abc", unicode.isDigit, -1, -1],
     ["\ud800a\ud800", isValidRune, 1, 1],
-    ["\ud800a\xd800", not(isValidRune), 0, 2],
-    ["\ue000☺\e0000", not(isValidRune), 0, 4],
-    ["\ue000☺\ue000\ue000", not(isValidRune), 0, 5],
+    ["\ud800a\ud800", not(isValidRune), 0, 2],
+    ["\ue000☺\ue0000", not(isValidRune), 0, 2],
+    ["\ue000☺\ue000\ue000", not(isValidRune), 0, 3],
     ["ab\ue000a\ue000cd", not(isValidRune), 2, 4],
     ["a\ue000\ud800cd", not(isValidRune), 1, 2],
     ["\ud800\ud800\ud800\ud800", not(isValidRune), 0, 3],
   ];
 
-  it("indexFunc", function() {
+  it("indexFunc|lastIndexFunc", function() {
     for (var i = 0; i < indexFuncTests.length; i++) {
       var test = indexFuncTests[i];
       var got = strings.indexFunc(test[0], test[1]);
       got.should.eql(test[2], i.toString() + ": indexFunc("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
+
+    }
+
+    for (var i = 0; i < indexFuncTests.length; i++) {
+      var test = indexFuncTests[i];
+      var got = strings.lastIndexFunc(test[0], test[1]);
+      got.should.eql(test[3], i.toString() + ": lastIndexFunc("+ JSON.stringify(test[0]) + "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
 
     }
   });
@@ -447,6 +459,7 @@ describe("strings", function() {
     ["a.RegExp*", ".(|)*+?^$[]", 8],
     [dots + dots + dots, " ", -1],
     ["012abcba210", "\xffb", 6],
+
     // Go replaces this with the unicode replacement character uffd. Javascript
     // does not do that. I'm not sure what the behavior should be here. For now
     // just comment this out.
@@ -463,6 +476,24 @@ describe("strings", function() {
 
   it("lastIndexAny", function() {
     runIndexTests(strings.lastIndexAny, this.test.title, lastIndexAnyTests);
+  });
+
+  var lastIndexByteTests = [
+    ["", "q".charCodeAt(0), -1],
+    ["abcdef", "q".charCodeAt(0), -1],
+    ["abcdefabcdef", "a".charCodeAt(0), "abcdef".length],      // something in the middle
+    ["abcdefabcdef", "f".charCodeAt(0), "abcdefabcde".length], // last byte
+    ["zabcdefabcdef", "z".charCodeAt(0), 0],                 // first byte
+    ["a☺b☻c☹d", "b".charCodeAt(0), "a☺".length],               // non-ascii
+  ];
+
+  it("lastIndexByte", function() {
+    for (var i = 0; i < lastIndexByteTests.length; i++) {
+      var test = lastIndexByteTests[i];
+      var got = strings.lastIndexByte(test[0], test[1]);
+      got.should.eql(test[2], i.toString() + ": lastIndexByte("+ JSON.stringify(test[0]) + ", " + JSON.stringify(test[1])+ "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
+
+    }
   });
 
   var repeatTests = [

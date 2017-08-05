@@ -337,27 +337,38 @@ var strings = {
 
   // IndexByte returns the index of the first instance of c in s, or -1 if c is
   // not present in s.
-  indexByte: function(s, c) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
+  indexByte: function(s, i) {
+    areStrings([s]);
+    if (!Number.isInteger(i) || i < 0 || i > 256) {
+      throw new Error("Invalid byte: " + JSON.stringify(i));
     }
-    if (!isString(c)) {
-      throw new Error("not a string: " + JSON.stringify(c));
-    }
-    if (c.length !== 1) {
-      throw new Error("c has wrong length: " + c.length);
-    }
-    return strings.index(s, c);
+    return strings.index(s, String.fromCharCode(i));
   },
 
   // IndexFunc returns the index into s of the first Unicode
   // code point satisfying f(c), or -1 if none do.
+  //
+  // f will be called with an integer value. f must return a boolean value or
+  // indexFunc's behavior is undefined.
   //
   // Note due to UTF-16 encoding of strings that this function will return
   // different results than the Go function.
   indexFunc: function(s, f) {
     return strings._indexFunc(s, f, true)
   },
+
+  // LastIndexFunc returns the index into s of the last
+  // Unicode code point satisfying f(c), or -1 if none do.
+  //
+  // f will be called with an integer value. f must return a boolean value or
+  // lastIndexFunc's behavior is undefined.
+  //
+  // Note due to UTF-16 encoding of strings that this function will return
+  // different results than the Go function.
+  lastIndexFunc: function(s, f) {
+    return strings._lastIndexFunc(s, f, true);
+  },
+
 
   // indexFunc is the same as IndexFunc except that if
   // truth==false, the sense of the predicate function is
@@ -382,6 +393,30 @@ var strings = {
       i += c.length;
     }
     return -1;
+  },
+
+  // lastIndexFunc is the same as LastIndexFunc except that if
+  // truth==false, the sense of the predicate function is
+  // inverted.
+  _lastIndexFunc: function(s, f, truth) {
+    areStrings([s]);
+    // once through using the iterator, to get all of the code points.
+    var s1 = [];
+    for (const c of s) {
+      s1.push(c);
+    }
+    var i = s.length;
+    for (var j = s1.length -1; j >= 0; j--) {
+      i -= s1[j].length;
+      var result = f(s1[j].codePointAt(0))
+      if (result !== true && result !== false) {
+        throw new Error("lastIndexFunc did not return true or false");
+      }
+      if (result === truth) {
+        return i;
+      }
+    }
+    return -1
   },
 
   // IndexRune returns the index of the first instance of the Unicode code point
@@ -475,6 +510,18 @@ var strings = {
       }
     }
     return -1;
+  },
+
+  // LastIndexByte returns the index of the last instance of c in s, or -1 if c
+  // is not present in s.
+  //
+  // i should be an integer between 0 and 256.
+  lastIndexByte: function(s, i) {
+    areStrings([s]);
+    if (!Number.isInteger(i) || i < 0 || i > 256) {
+      throw new Error("Invalid byte: " + JSON.stringify(i));
+    }
+    return strings.lastIndex(s, String.fromCharCode(i));
   },
 
   // Repeat returns a new string consisting of count copies of the string s.
