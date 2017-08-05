@@ -15,6 +15,8 @@ lint: $(ESLINT)
 		--rule='{"space-before-blocks": "error"}' \
 		--rule='{"keyword-spacing": [ "error", {"before": true, "after": true} ]}' \
 		--rule='{"eqeqeq": [2]}' \
+		--rule='{"linebreak-style": [ 2, "unix" ]}' \
+		--rule='{"indent": [ 0, 2 ]}' \
 		.
 
 $(TT): | node_modules/.bin
