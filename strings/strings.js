@@ -43,7 +43,7 @@ var hashStr = function(sep) {
   var pow = 1;
   var sq = primeRK;
   for (var i = sep.length; i > 0; i >>= 1) {
-    if (i&1 != 0) {
+    if (i&1 !== 0) {
       pow = uint32mul(pow, sq);
     }
     sq = uint32mul(sq, sq);
@@ -60,18 +60,18 @@ var hashStrRev = function(sep) {
   var pow = 1;
   var sq = primeRK;
   for (var i = sep.length; i > 0; i >>= 1) {
-    if (i&1 != 0) {
+    if (i&1 !== 0) {
       pow = uint32mul(pow, sq);
     }
     sq = uint32mul(sq, sq);
   }
   return [hash, pow];
-}
+};
 
 var toUint32 = function(x) {
   // the shift operator forces js to perform the internal ToUint32 (see ecmascript spec 9.6)
   return x >>> 0;
-}
+};
 
 var uint32mul = function(x, y) {
   var high16 =  ((x & 0xffff0000) >>> 0) * y;
@@ -89,7 +89,7 @@ var uint32sub = function(x, y) {
   if (x > y) {
     return x - y;
   }
-  return (x - y) + (maxUint32 + 1)
+  return (x - y) + (maxUint32 + 1);
 };
 
 var strings = {
@@ -103,7 +103,7 @@ var strings = {
   // Note compare uses the Javascript notions of string equality, not the Go
   // notions.
   compare: function(a, b) {
-    areStrings([a, b])
+    areStrings([a, b]);
     if (a === b) {
       return 0;
     }
@@ -115,13 +115,13 @@ var strings = {
 
   // Contains reports whether substr is within s.
   contains: function(s, substr) {
-    areStrings([s, substr])
+    areStrings([s, substr]);
     return strings.index(s, substr) >= 0;
   },
 
   // ContainsAny reports whether any Unicode code points in chars are within s.
   containsAny: function(s, chars) {
-    areStrings([s, chars])
+    areStrings([s, chars]);
     return strings.indexAny(s, chars) >= 0;
   },
 
@@ -129,11 +129,11 @@ var strings = {
   // substr is an empty string, Count returns 1 + the number of Unicode code
   // points in s.
   count: function(s, substr) {
-    areStrings([s, substr])
+    areStrings([s, substr]);
     if (substr === "") {
       return s.length + 1;
     }
-    var n = 0
+    var n = 0;
     while (true) {
       var i = strings.index(s, substr);
       if (i === -1) {
@@ -184,7 +184,7 @@ var strings = {
         i += c.length;
         continue;
       }
-      a.push(s.slice(fieldStart, i))
+      a.push(s.slice(fieldStart, i));
       i += c.length;
 
       // Skip spaces in between fields.
@@ -218,7 +218,7 @@ var strings = {
   fieldsFunc: function(s, f) {
     areStrings([s]);
     if (typeof f !== 'function') {
-      throw new Error("fieldsFunc must be passed a function")
+      throw new Error("fieldsFunc must be passed a function");
     }
     // First count the fields.
     var n = 0;
@@ -303,7 +303,7 @@ var strings = {
     for (var i = n; i < s.length;) {
       h = uint32mul(h, primeRK);
       h += s[i].charCodeAt(0);
-      h = uint32sub(h, uint32mul(pow, (s[i-n]).charCodeAt(0)))
+      h = uint32sub(h, uint32mul(pow, (s[i-n]).charCodeAt(0)));
       i++;
       if (h === hashss && s.slice(i-n, i) === substr) {
         return i - n;
@@ -354,7 +354,7 @@ var strings = {
   // Note due to UTF-16 encoding of strings that this function will return
   // different results than the Go function.
   indexFunc: function(s, f) {
-    return strings._indexFunc(s, f, true)
+    return strings._indexFunc(s, f, true);
   },
 
   // LastIndexFunc returns the index into s of the last
@@ -376,16 +376,16 @@ var strings = {
   _indexFunc: function(s, f, truth) {
     areStrings([s]);
     if (typeof f !== 'function') {
-      throw new Error("indexFunc must be passed a function")
+      throw new Error("indexFunc must be passed a function");
     }
     if (truth !== true && truth !== false) {
-      throw new Error("indexFunc must be passed a boolean")
+      throw new Error("indexFunc must be passed a boolean");
     }
     var i = 0;
     for (const c of s) {
       var result = f(c.codePointAt(0));
       if (result !== true && result !== false) {
-        throw new Error("indexFunc: result of f must be a boolean")
+        throw new Error("indexFunc: result of f must be a boolean");
       }
       if (result === truth) {
         return i;
@@ -400,6 +400,12 @@ var strings = {
   // inverted.
   _lastIndexFunc: function(s, f, truth) {
     areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("lastIndexFunc must be passed a function");
+    }
+    if (truth !== true && truth !== false) {
+      throw new Error("lastIndexFunc must be passed a boolean");
+    }
     // once through using the iterator, to get all of the code points.
     var s1 = [];
     for (const c of s) {
@@ -408,7 +414,7 @@ var strings = {
     var i = s.length;
     for (var j = s1.length -1; j >= 0; j--) {
       i -= s1[j].length;
-      var result = f(s1[j].codePointAt(0))
+      var result = f(s1[j].codePointAt(0));
       if (result !== true && result !== false) {
         throw new Error("lastIndexFunc did not return true or false");
       }
@@ -416,7 +422,7 @@ var strings = {
         return i;
       }
     }
-    return -1
+    return -1;
   },
 
   // IndexRune returns the index of the first instance of the Unicode code point
@@ -453,7 +459,7 @@ var strings = {
   // LastIndex returns the index of the last instance of substr in s, or -1 if
   // substr is not present in s.
   lastIndex: function(s, substr) {
-    areStrings([s, substr])
+    areStrings([s, substr]);
     if (substr.length === 0) {
       return s.length;
     }
@@ -468,7 +474,7 @@ var strings = {
     }
     var result = hashStrRev(substr);
     var hashss = result[0], pow = result[1];
-    var last = s.length - substr.length
+    var last = s.length - substr.length;
     var h = 0;
     for (var i = s.length - 1; i >= last; i--) {
       h = uint32mul(h, primeRK) + s[i].charCodeAt(0);
@@ -524,6 +530,28 @@ var strings = {
     return strings.lastIndex(s, String.fromCharCode(i));
   },
 
+  // Map returns a copy of the string s with all its characters modified
+  // according to the mapping function. If mapping returns a negative value, the
+  // character is dropped from the string with no replacement.
+  //
+  // mapping should take an integer between 0 and unicode.maxRune and return an
+  // integer, otherwise the behavior of map is not defined.
+  map: function(mapping, s) {
+    areStrings([s]);
+    if (typeof mapping !== 'function') {
+      throw new Error("map must be passed a function");
+    }
+    var s2 = "";
+    for (const c of s) {
+      var result = mapping(c.codePointAt(0));
+      if (!Number.isInteger(result) || result < 0 || result > unicode.maxRune) {
+        throw new Error("Invalid rune: " + JSON.stringify(result));
+      }
+      s2 += String.fromCodePoint(result);
+    }
+    return s2;
+  },
+
   // Repeat returns a new string consisting of count copies of the string s.
   //
   // It throws an error if count is negative or if the result of
@@ -534,12 +562,22 @@ var strings = {
       throw new Error("strings: count not an integer: " + JSON.stringify(count));
     }
     if (count < 0) {
-      throw new Error("strings: negative Repeat count")
+      throw new Error("strings: negative Repeat count");
     }
 
     // this throws RangeError
     return s.repeat(count);
-  }
+  },
+
+  // Replace returns a copy of the string s with the first n
+  // non-overlapping instances of old replaced by new.
+  // If old is empty, it matches at the beginning of the string
+  // and after each UTF-8 sequence, yielding up to k+1 replacements
+  // for a k-rune string.
+  // If n < 0, there is no limit on the number of replacements.
+  replace: function(s, old, new_, n) {
+    areStrings([s, old, new_]);
+  },
 };
 
 module.exports = strings;

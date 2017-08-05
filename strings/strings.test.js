@@ -168,7 +168,7 @@ describe("strings", function() {
       var got = strings.equalFold(test[0], test[1]);
       got.should.equal(test[2], "equalFold("+ test[0] + ", " + test[1] + "), got " + got + ", want " + test[2]);
     }
-  })
+  });
 
   var fieldsTests = [
     ["", []],
@@ -212,7 +212,7 @@ describe("strings", function() {
 
     }
     const x = 'X'.codePointAt(0);
-    var pred = function(c) { return c === x; }
+    var pred = function(c) { return c === x; };
     for (var i = 0; i < fieldsFuncTests.length; i++) {
       var test = fieldsFuncTests[i];
       var got = strings.fieldsFunc(test[0], pred);
@@ -329,12 +329,12 @@ describe("strings", function() {
   it("join", function() {
     strings.join(["foo", "bar", "baz"], ",").should.equal("foo,bar,baz");
     strings.join([], ",").should.equal("");
-  })
+  });
 
   var runIndexTests = function(f, name, tests) {
     for (var i = 0; i < tests.length; i++) {
       var test = tests[i];
-      var got = f(test[0], test[1])
+      var got = f(test[0], test[1]);
       if (got !== test[2]) {
         throw new Error(name + "(" + JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + got + ", want " + test[2]);
       }
@@ -496,6 +496,36 @@ describe("strings", function() {
     }
   });
 
+  const a = 'a'.codePointAt(0);
+  const z = 'z'.codePointAt(0);
+  const A = 'A'.codePointAt(0);
+  const Z = 'Z'.codePointAt(0);
+  var rot13 = function(i) {
+    if (i >= a && i <= z) {
+      i = i + 13;
+      if (i > z) {
+        return i - 26;
+      }
+      return i;
+    }
+    if (i >= A && i <= Z) {
+      i = i + 13;
+      if (i > Z) {
+        return i - 26;
+      }
+      return i;
+    }
+    return i;
+  };
+
+  it("map", function() {
+    var m = strings.map(rot13, "a to zed");
+    m.should.equal("n gb mrq");
+
+    var m = strings.map(rot13, strings.map(rot13, "a to zed"));
+    m.should.equal("a to zed");
+  });
+
   var repeatTests = [
     ["", "", 0],
     ["", "", 1],
@@ -513,5 +543,5 @@ describe("strings", function() {
       got.should.eql(test[1], i.toString() + ": repeat("+ JSON.stringify(test[0]) + ", " + JSON.stringify(test[2])+ "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
 
     }
-  })
+  });
 });

@@ -112,13 +112,13 @@ describe("unicode", function() {
   it("isSpace", function() {
     for (var i = 0; i < spaceTest.length; i++) {
       var test = spaceTest[i];
-      var got = unicode.isSpace(test)
-      got.should.equal(true, "isSpace(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want true")
+      var got = unicode.isSpace(test);
+      got.should.equal(true, "isSpace(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want true");
     }
     for (var i = 0; i < letterTest.length; i++) {
       var test = letterTest[i];
-      var got = unicode.isSpace(test)
-      got.should.equal(false, "isSpace(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want false")
+      var got = unicode.isSpace(test);
+      got.should.equal(false, "isSpace(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want false");
     }
   });
 
@@ -175,17 +175,17 @@ describe("unicode", function() {
   it("isUpper", function() {
     for (var i = 0; i < upperTest.length; i++) {
       var test = upperTest[i];
-      var got = unicode.isUpper(test)
+      var got = unicode.isUpper(test);
       got.should.equal(true, "isUpper(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want true");
     }
     for (var i = 0; i < notupperTest.length; i++) {
       var test = notupperTest[i];
-      var got = unicode.isUpper(test)
+      var got = unicode.isUpper(test);
       got.should.equal(false, "isUpper(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want false");
     }
     for (var i = 0; i < notletterTest.length; i++) {
       var test = notletterTest[i];
-      var got = unicode.isUpper(test)
+      var got = unicode.isUpper(test);
       got.should.equal(false, "isUpper(" + JSON.stringify(test) + "): got " + JSON.stringify(got) + ", want false");
     }
   });

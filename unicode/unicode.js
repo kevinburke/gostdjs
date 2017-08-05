@@ -23,11 +23,11 @@ var is16 = function(ranges, r) {
     }
   }
   return false;
-}
+};
 
 var is32 = function(ranges, r) {
   for (var i = 0; i < ranges.length; i++) {
-    var range_ = ranges[i]
+    var range_ = ranges[i];
     var lo = range_[0];
     var hi = range_[1];
     var stride = range_[2];
@@ -39,7 +39,7 @@ var is32 = function(ranges, r) {
     }
   }
   return false;
-}
+};
 
 var isExcludingLatin = function(rangeTab, r) {
   var r16 = rangeTab.R16;
@@ -52,7 +52,7 @@ var isExcludingLatin = function(rangeTab, r) {
     return is32(r32, r);
   }
   return false;
-}
+};
 
 var zero = '0'.codePointAt(0);
 var nine = '9'.codePointAt(0);
@@ -71,7 +71,7 @@ var unicode = {
     if (i <= unicode.maxLatin1) {
       return zero <= i && i <= nine;
     }
-    return isExcludingLatin(tables.Digit, i)
+    return isExcludingLatin(tables.Digit, i);
   },
 
   // IsSpace reports whether the rune is a space character as defined by
@@ -98,7 +98,7 @@ var unicode = {
     if (i <= unicode.maxLatin1) {
       return (tables.properties[i]&tables.pLmask) === tables.pLu;
     }
-    return isExcludingLatin(tables.Upper, i)
+    return isExcludingLatin(tables.Upper, i);
   },
 };
 
