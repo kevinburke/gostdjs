@@ -319,6 +319,36 @@ describe("strings", function() {
     strings.join([], ",").should.equal("");
   })
 
+  var runIndexTests = function(f, name, tests) {
+    for (var i = 0; i < tests.length; i++) {
+      var test = tests[i];
+      var got = f(test[0], test[1])
+      if (got !== test[2]) {
+        throw new Error(name + "(" + test[0] + ", " + test[1] + "): got " + got + ", want " + test[2]);
+      }
+    }
+  };
+
+  var lastIndexTests = [
+    ["", "", 0],
+    ["", "a", -1],
+    ["", "foo", -1],
+    ["fo", "foo", -1],
+    ["foo", "foo", 0],
+    ["foo", "f", 0],
+    ["oofofoofooo", "f", 7],
+    ["oofofoofooo", "foo", 7],
+    ["barfoobarfoo", "foo", 9],
+    ["foo", "", 3],
+    ["foo", "o", 2],
+    ["abcABCabc", "A", 3],
+    ["abcABCabc", "a", 6],
+  ];
+
+  it("lastIndex", function() {
+    runIndexTests(strings.lastIndex, this.test.name, lastIndexTests);
+  });
+
   var repeatTests = [
     ["", "", 0],
     ["", "", 1],

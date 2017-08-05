@@ -35,9 +35,26 @@ var areStrings = function(args) {
 // hashStr returns the hash and the appropriate multiplicative
 // factor for use in Rabin-Karp algorithm.
 var hashStr = function(sep) {
-  areStrings([sep])
+  areStrings([sep]);
   var hash = 0;
   for (var i = 0; i < sep.length; i++) {
+    hash = uint32mul(hash, primeRK) + sep[i].charCodeAt(0);
+  }
+  var pow = 1;
+  var sq = primeRK;
+  for (var i = sep.length; i > 0; i >>= 1) {
+    if (i&1 != 0) {
+      pow = uint32mul(pow, sq);
+    }
+    sq = uint32mul(sq, sq);
+  }
+  return [hash, pow];
+};
+
+var hashStrRev = function(sep) {
+  areStrings([sep]);
+  var hash = 0;
+  for (var i = sep.length - 1; i >= 0; i--) {
     hash = uint32mul(hash, primeRK) + sep[i].charCodeAt(0);
   }
   var pow = 1;
@@ -396,6 +413,43 @@ var strings = {
       b = b.concat(a[i]);
     }
     return b;
+  },
+
+  // LastIndex returns the index of the last instance of substr in s, or -1 if
+  // substr is not present in s.
+  lastIndex: function(s, substr) {
+    areStrings([s, substr])
+    if (substr.length === 0) {
+      return s.length;
+    }
+    if (substr.length === s.length) {
+      if (s === substr) {
+        return 0;
+      }
+      return -1;
+    }
+    if (substr.length > s.length) {
+      return -1;
+    }
+    var result = hashStrRev(substr);
+    var hashss = result[0], pow = result[1];
+    var last = s.length - substr.length
+    var h = 0;
+    for (var i = s.length - 1; i >= last; i--) {
+      h = uint32mul(h, primeRK) + s[i].charCodeAt(0);
+    }
+    if (h === hashss && s.slice(last) === substr) {
+      return last;
+    }
+    for (var i = last - 1; i >= 0; i--) {
+      h = uint32mul(h, primeRK);
+      h += s[i].charCodeAt(0);
+      h = uint32sub(h, uint32mul(pow, s[i+substr.length].charCodeAt(0)));
+      if (h === hashss && s.slice(i,i+substr.length) === substr) {
+        return i;
+      }
+    }
+    return -1;
   },
 
   // Repeat returns a new string consisting of count copies of the string s.
