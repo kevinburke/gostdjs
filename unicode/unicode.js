@@ -135,6 +135,7 @@ var unicode = {
     return unicode.to(unicode.lowerCase, i);
   },
 
+  // ToTitle maps the rune to title case.
   toTitle: function(i) {
     if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
       throw new Error("Invalid rune: " + JSON.stringify(i));
@@ -146,6 +147,20 @@ var unicode = {
       return i;
     }
     return unicode.to(unicode.titleCase, i);
+  },
+
+  // ToUpper maps the rune to upper case.
+  toUpper: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxAscii) {
+      if (a <= i && i <= z) { // title case is upper case for ASCII
+        i -= a - A;
+      }
+      return i;
+    }
+    return unicode.to(unicode.upperCase, i);
   },
 
   // To maps the rune to the specified case: UpperCase, LowerCase, or TitleCase.

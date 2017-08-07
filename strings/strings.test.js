@@ -686,4 +686,114 @@ describe("strings", function() {
       got.should.equal(test[1]);
     }
   });
+
+  var upperTests = [
+    ["", ""],
+    ["abc", "ABC"],
+    ["AbC123", "ABC123"],
+    ["azAZ09_", "AZAZ09_"],
+    ["\u0250\u0250\u0250\u0250\u0250", "\u2C6F\u2C6F\u2C6F\u2C6F\u2C6F"], // grows one byte per char
+  ];
+
+  it("toUpper", function() {
+    for (var i = 0; i < upperTests.length; i++) {
+      var test = upperTests[i];
+      var got = strings.toUpper(test[0]);
+      got.should.equal(test[1]);
+    }
+  });
+
+  var trimTests = [
+    ["Trim", "abba", "a", "bb"],
+    ["Trim", "abba", "ab", ""],
+    ["TrimLeft", "abba", "ab", ""],
+    ["TrimRight", "abba", "ab", ""],
+    ["TrimLeft", "abba", "a", "bba"],
+    ["TrimRight", "abba", "a", "abb"],
+    ["Trim", "<tag>", "<>", "tag"],
+    ["Trim", "* listitem", " *", "listitem"],
+    ["Trim", `"quote"`, `"`, "quote"],
+    ["Trim", "\u2C6F\u2C6F\u0250\u0250\u2C6F\u2C6F", "\u2C6F", "\u0250\u0250"],
+    // Not sure what to do here. in UTF-8, the beginning and end characters get
+    // replaced with RuneError, or the replacement character, which is a single
+    // char in utf-8, and similarly with the cutset, so this test works.
+    // Javascript doesn't provide easy methods for detecting/replacing invalid
+    // chars in a string.
+    //
+    // In the future maybe we implement utf16.Decode and this package operates
+    // entirely on integer arrays.
+    //["Trim", "\x80test\xff", "\xff", "test"],
+    ["Trim", " Ġ ", " ", "Ġ"],
+    ["Trim", " Ġİ0", "0 ", "Ġİ"],
+    //empty string tests
+    ["Trim", "abba", "", "abba"],
+    ["Trim", "", "123", ""],
+    ["Trim", "", "", ""],
+    ["TrimLeft", "abba", "", "abba"],
+    ["TrimLeft", "", "123", ""],
+    ["TrimLeft", "", "", ""],
+    ["TrimRight", "abba", "", "abba"],
+    ["TrimRight", "", "123", ""],
+    ["TrimRight", "", "", ""],
+    ["TrimRight", "☺\xc0", "☺", "☺\xc0"],
+    ["TrimPrefix", "aabb", "a", "abb"],
+    ["TrimPrefix", "aabb", "b", "aabb"],
+    ["TrimSuffix", "aabb", "a", "aabb"],
+    ["TrimSuffix", "aabb", "b", "aab"],
+  ];
+
+  it("trim", function() {
+    for (var i = 0; i < trimTests.length; i++) {
+      var test = trimTests[i];
+      if (test[0] !== "Trim") {
+        continue;
+      }
+      var got = strings.trim(test[1], test[2]);
+      got.should.equal(test[3], "trim " + JSON.stringify(test[1]) + " " + JSON.stringify(test[2]));
+    }
+  });
+
+  it("trimLeft", function() {
+    for (var i = 0; i < trimTests.length; i++) {
+      var test = trimTests[i];
+      if (test[0] !== "TrimLeft") {
+        continue;
+      }
+      var got = strings.trimLeft(test[1], test[2]);
+      got.should.equal(test[3], "trimLeft " + JSON.stringify(test[1]) + " " + JSON.stringify(test[2]));
+    }
+  });
+
+  it("trimRight", function() {
+    for (var i = 0; i < trimTests.length; i++) {
+      var test = trimTests[i];
+      if (test[0] !== "TrimRight") {
+        continue;
+      }
+      var got = strings.trimRight(test[1], test[2]);
+      got.should.equal(test[3], "trimRight " + JSON.stringify(test[1]) + " " + JSON.stringify(test[2]));
+    }
+  });
+
+  it("trimPrefix", function() {
+    for (var i = 0; i < trimTests.length; i++) {
+      var test = trimTests[i];
+      if (test[0] !== "TrimPrefix") {
+        continue;
+      }
+      var got = strings.trimPrefix(test[1], test[2]);
+      got.should.equal(test[3], "trimPrefix " + JSON.stringify(test[1]) + " " + JSON.stringify(test[2]));
+    }
+  });
+
+  it("trimSuffix", function() {
+    for (var i = 0; i < trimTests.length; i++) {
+      var test = trimTests[i];
+      if (test[0] !== "TrimSuffix") {
+        continue;
+      }
+      var got = strings.trimSuffix(test[1], test[2]);
+      got.should.equal(test[3], "trimSuffix " + JSON.stringify(test[1]) + " " + JSON.stringify(test[2]));
+    }
+  });
 });

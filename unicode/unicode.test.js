@@ -350,7 +350,7 @@ describe("unicode", function() {
         continue;
       }
       count++;
-      var r = unicode.toLower(test[1])
+      var r = unicode.toLower(test[1]);
       r.should.equal(test[2]);
     }
     (count > 0).should.equal(true);

@@ -124,6 +124,18 @@ var uint32sub = function(x, y) {
   return (x - y) + (maxUint32 + 1);
 };
 
+var makeCutsetFunc = function(cutset) {
+  areStrings([cutset]);
+  if (cutset.length === 1 && cutset.codePointAt(0) < 0x80) {
+    var cp = cutset.codePointAt(0);
+    return function(i) { return i === cp; };
+  }
+  return function(i) {
+    var idx = strings.indexRune(cutset, i);
+    return idx >= 0;
+  };
+};
+
 var strings = {
   _uint32mul: uint32mul,
 
@@ -327,15 +339,15 @@ var strings = {
     var hashss = result[0], pow = result[1];
     var h = 0;
     for (var i = 0; i < n; i++) {
-      h = uint32mul(h, primeRK) + s[i].charCodeAt(0);
+      h = uint32mul(h, primeRK) + s[i].codePointAt(0);
     }
     if (h === hashss && s.slice(0, n) === substr) {
       return 0;
     }
     for (var i = n; i < s.length;) {
       h = uint32mul(h, primeRK);
-      h += s[i].charCodeAt(0);
-      h = uint32sub(h, uint32mul(pow, (s[i-n]).charCodeAt(0)));
+      h += s[i].codePointAt(0);
+      h = uint32sub(h, uint32mul(pow, (s[i-n]).codePointAt(0)));
       i++;
       if (h === hashss && s.slice(i-n, i) === substr) {
         return i - n;
@@ -374,7 +386,7 @@ var strings = {
     if (!Number.isInteger(i) || i < 0 || i > 256) {
       throw new Error("Invalid byte: " + JSON.stringify(i));
     }
-    return strings.index(s, String.fromCharCode(i));
+    return strings.index(s, String.fromCodePoint(i));
   },
 
   // IndexFunc returns the index into s of the first Unicode
@@ -466,7 +478,7 @@ var strings = {
     if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
       throw new Error("Invalid rune: " + JSON.stringify(i));
     }
-    return strings.index(s, String.fromCharCode(i));
+    return strings.index(s, String.fromCodePoint(i));
   },
 
   // Join concatenates the elements of a to create a single string. The
@@ -559,7 +571,7 @@ var strings = {
     if (!Number.isInteger(i) || i < 0 || i > 256) {
       throw new Error("Invalid byte: " + JSON.stringify(i));
     }
-    return strings.lastIndex(s, String.fromCharCode(i));
+    return strings.lastIndex(s, String.fromCodePoint(i));
   },
 
   // Map returns a copy of the string s with all its characters modified
@@ -796,6 +808,129 @@ var strings = {
   toLower: function(s) {
     areStrings([s]);
     return strings.map(unicode.toLower, s);
+  },
+
+  // ToUpper returns a copy of the string s with all Unicode letters mapped to
+  // their lower case.
+  toUpper: function(s) {
+    areStrings([s]);
+    return strings.map(unicode.toUpper, s);
+  },
+
+  // ToLowerSpecial returns a copy of the string s with all Unicode letters
+  // mapped to their lower case, giving priority to the special casing rules.
+  toLowerSpecial: function() {
+    throw new Error("unimplemented");
+  },
+
+  // ToUpper returns a copy of the string s with all Unicode letters mapped to
+  // their upper case.
+  toUpperSpecial: function() {
+    throw new Error("unimplemented");
+  },
+
+  // ToTitleSpecial returns a copy of the string s with all Unicode letters
+  // mapped to their title case, giving priority to the special casing rules.
+  toTitleSpecial: function() {
+    throw new Error("unimplemented");
+  },
+
+  // ToTitle returns a copy of the string s with all Unicode letters mapped to
+  // their title case.
+  toTitle: function(s) {
+    areStrings([s]);
+    return strings.map(unicode.toTitle, s);
+  },
+
+  // Trim returns a slice of the string s with all leading and trailing Unicode
+  // code points contained in cutset removed.
+  trim: function(s, cutset) {
+    areStrings([s, cutset]);
+    if (s === "" || cutset === "") {
+      return s;
+    }
+    return strings.trimFunc(s, makeCutsetFunc(cutset));
+  },
+
+  // TrimLeft returns a slice of the string s with all leading Unicode code
+  // points contained in cutset removed.
+  trimLeft: function(s, cutset) {
+    areStrings([s, cutset]);
+    if (s === "" || cutset === "") {
+      return s;
+    }
+    return strings.trimLeftFunc(s, makeCutsetFunc(cutset));
+  },
+
+  // TrimRight returns a slice of the string s, with all trailing
+  // Unicode code points contained in cutset removed.
+  trimRight: function(s, cutset) {
+    areStrings([s, cutset]);
+    if (s === "" || cutset === "") {
+      return s;
+    }
+    return strings.trimRightFunc(s, makeCutsetFunc(cutset));
+  },
+
+  // TrimFunc returns a slice of the string s with all leading
+  // and trailing Unicode code points c satisfying f(c) removed. f must take an
+  // integer argument and return a boolean, otherwise the behavior of this
+  // function is not defined.
+  trimFunc: function(s, f) {
+    areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("trimFunc must be passed a function");
+    }
+    return strings.trimRightFunc(strings.trimLeftFunc(s, f), f);
+  },
+
+  // TrimLeftFunc returns a slice of the string s with all leading
+  // Unicode code points c satisfying f(c) removed.
+  trimLeftFunc: function(s, f) {
+    areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("trimFunc must be passed a function");
+    }
+    var i = strings._indexFunc(s, f, false);
+    if (i === -1) {
+      return "";
+    }
+    return s.slice(i);
+  },
+
+  // TrimRightFunc returns a slice of the string s with all trailing
+  // Unicode code points c satisfying f(c) removed.
+  trimRightFunc: function(s, f) {
+    areStrings([s]);
+    if (typeof f !== 'function') {
+      throw new Error("trimFunc must be passed a function");
+    }
+    var i = strings._lastIndexFunc(s, f, false);
+    if (i === -1) {
+      return "";
+    }
+    i += s[i].length;
+    return s.slice(0, i);
+  },
+
+  // TrimPrefix returns s without the provided leading prefix string.
+  // If s doesn't start with prefix, s is returned unchanged.
+  trimPrefix: function(s, prefix) {
+    areStrings([s, prefix]);
+    if (strings.hasPrefix(s, prefix)) {
+      return s.slice(prefix.length);
+    }
+    return s;
+  },
+
+  // TrimSuffix returns s without the provided trailing suffix string.
+  // If s doesn't end with suffix, s is returned unchanged.
+  trimSuffix: function(s, suffix) {
+    areStrings([s, suffix]);
+    if (strings.hasSuffix(s, suffix)) {
+      return s.slice(0, s.length-suffix.length);
+    }
+    return s;
   },
 };
 
