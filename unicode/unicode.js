@@ -9,6 +9,11 @@ const feedNum = '\f'.charCodeAt(0);
 const returnNum = '\r'.charCodeAt(0);
 const newlineNum = '\n'.charCodeAt(0);
 
+const a = 'a'.codePointAt(0);
+const z = 'z'.codePointAt(0);
+const A = 'A'.codePointAt(0);
+const Z = 'Z'.codePointAt(0);
+
 var is16 = function(ranges, r) {
   for (var i = 0; i < ranges.length; i++) {
     var range_ = ranges[i];
@@ -62,6 +67,10 @@ var unicode = {
   maxAscii: "\u007f".codePointAt(0),
   maxRune: "\udbff\udfff".codePointAt(0),
   replacementChar: "\ufffd".codePointAt(0),
+  upperCase: 0,
+  lowerCase: 1,
+  titleCase: 2,
+  maxCase: 3,
 
   // IsDigit reports whether the rune is a decimal digit.
   isDigit: function(i) {
@@ -72,6 +81,17 @@ var unicode = {
       return zero <= i && i <= nine;
     }
     return isExcludingLatin(tables.Digit, i);
+  },
+
+  // IsLetter reports whether the rune is a letter (category L).
+  isLetter: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxLatin1) {
+      return (tables.properties[i]&tables.pLmask) !== 0;
+    }
+    return isExcludingLatin(tables.Letter, i);
   },
 
   // IsSpace reports whether the rune is a space character as defined by
@@ -99,6 +119,60 @@ var unicode = {
       return (tables.properties[i]&tables.pLmask) === tables.pLu;
     }
     return isExcludingLatin(tables.Upper, i);
+  },
+
+  toTitle: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxAscii) {
+      if (a <= i && i <= z) { // title case is upper case for ASCII
+        i -= a - A;
+      }
+      return i;
+    }
+    return unicode.to(unicode.titleCase, i);
+  },
+
+  // To maps the rune to the specified case: UpperCase, LowerCase, or TitleCase.
+  to: function(_case, i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (_case < 0 || unicode.maxCase <= _case) {
+      return unicode.replacementChar; // as reasonable an error as any
+    }
+    // binary search over ranges
+    var lo = 0;
+    var hi = tables.CaseRanges.length;
+    while (lo < hi) {
+      var m = lo + Math.floor((hi-lo)/2);
+      var cr = tables.CaseRanges[m];
+      if (cr[0] <= i && i <= cr[1]) {
+        var delta = cr[2][_case];
+        if (delta > unicode.maxRune) {
+          // In an Upper-Lower sequence, which always starts with
+          // an UpperCase letter, the real deltas always look like:
+          //	{0, 1, 0}    UpperCase (Lower is next)
+          //	{-1, 0, -1}  LowerCase (Upper, Title are previous)
+          // The characters at even offsets from the beginning of the
+          // sequence are upper case; the ones at odd offsets are lower.
+          // The correct mapping can be done by clearing or setting the low
+          // bit in the sequence offset.
+          // The constants UpperCase and TitleCase are even while LowerCase
+          // is odd so we take the low bit from _case.
+          // 4294967294 is ^uint32(1), since JS doesn't have &^.
+          return cr[0] + ((i-cr[0])& 4294967294 | _case&1);
+        }
+        return i + delta;
+      }
+      if (i < cr[0]) {
+        hi = m;
+      } else {
+        lo = m + 1;
+      }
+    }
+    return i;
   },
 };
 

@@ -648,4 +648,24 @@ describe("strings", function() {
       got.should.eql(test[3], "splitAfter("+JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
     }
   });
+
+  var titleTests = [
+    ["", ""],
+    ["a", "A"],
+    [" aaa aaa aaa ", " Aaa Aaa Aaa "],
+    [" Aaa Aaa Aaa ", " Aaa Aaa Aaa "],
+    ["123a456", "123a456"],
+    ["double-blind", "Double-Blind"],
+    ["ÿøû", "Ÿøû"],
+    ["with_underscore", "With_underscore"],
+    ["unicode \u2028 line separator", "Unicode \u2028 Line Separator"],
+  ];
+
+  it("title", function() {
+    for (var i = 0; i < titleTests.length; i++) {
+      var test = titleTests[i];
+      var got = strings.title(test[0]);
+      got.should.equal(test[1], "title("+ test[0] + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+    }
+  });
 });

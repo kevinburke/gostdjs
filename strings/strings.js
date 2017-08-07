@@ -21,6 +21,38 @@ var isString = function(val) {
   return typeof val === "string" || val instanceof String;
 };
 
+const zero = '0'.codePointAt(0);
+const nine = '9'.codePointAt(0);
+const a = 'a'.codePointAt(0);
+const z = 'z'.codePointAt(0);
+const A = 'A'.codePointAt(0);
+const Z = 'Z'.codePointAt(0);
+
+var isSeparator = function(i) {
+  // ASCII alphanumerics and underscore are not separators
+  if (i <= 0x7F) {
+    if (zero <= i && i <= nine) {
+      return false;
+    }
+    if (a <= i && i <= z) {
+      return false;
+    }
+    if (A <= i && i <= Z) {
+      return false;
+    }
+    if (i === '_'.codePointAt(0)) {
+      return false;
+    }
+    return true;
+  }
+  // Letters and digits are not separators
+  if (unicode.isLetter(i) || unicode.isDigit(i)) {
+    return false;
+  }
+  // Otherwise, all we can do for now is treat spaces as separators.
+  return unicode.isSpace(i);
+};
+
 var areStrings = function(args) {
   if (!Array.isArray(args)) {
     throw new Error("args should be an array, got " + JSON.stringify(args));
@@ -738,6 +770,25 @@ var strings = {
   splitN: function(s, sep, n) {
     areStrings([s, sep]);
     return strings._genSplit(s, sep, 0, n);
+  },
+
+  // Title returns a copy of the string s with all Unicode letters that begin words
+  // mapped to their title case.
+  title: function(s) {
+    areStrings([s]);
+    // Use a closure here to remember state.
+    // Hackish but effective. Depends on Map scanning in order and calling
+    // the closure once per rune.
+    var prev = ' '.codePointAt(0);
+    var f = function(r) {
+      if (isSeparator(prev)) {
+        prev = r;
+        return unicode.toTitle(r);
+      }
+      prev = r;
+      return r;
+    };
+    return strings.map(f, s);
   },
 };
 
