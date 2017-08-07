@@ -577,6 +577,167 @@ var strings = {
   // If n < 0, there is no limit on the number of replacements.
   replace: function(s, old, new_, n) {
     areStrings([s, old, new_]);
+    if (!Number.isInteger(n)) {
+      throw new Error("strings: n not an integer: " + JSON.stringify(n));
+    }
+    if (old === new_ || n === 0) {
+      return s; // avoid allocation
+    }
+
+    // Compute number of replacements.
+    var m = strings.count(s, old);
+    if (m === 0) {
+      return s; // avoid allocation
+    } else if (n < 0 || m < n) {
+      n = m;
+    }
+
+    // Apply replacements to buffer.
+    var t = "";
+    var w = 0;
+    var start = 0;
+    for (var i = 0; i < n; i++) {
+      var j = start;
+      if (old.length === 0) {
+        if (i > 0) {
+          for (const c in s.slice(start)) {
+            j += c.length;
+            break;
+          }
+        }
+      } else {
+        j += strings.index(s.slice(start), old);
+      }
+      // Strings are immutable.
+      var slice = s.slice(start, j);
+      w += slice.length + new_.length;
+      t += slice;
+      t += new_;
+      start = j + old.length;
+    }
+    t += s.slice(start);
+    return t;
+  },
+
+  // Generic split: splits after each instance of sep,
+  // including sepSave bytes of sep in the subarrays.
+  _genSplit: function(s, sep, sepSave, n) {
+    areStrings([s, sep]);
+    if (!Number.isInteger(n)) {
+      throw new Error("strings: n not an integer: " + JSON.stringify(n));
+    }
+    if (!Number.isInteger(sepSave)) {
+      throw new Error("strings: n not an integer: " + JSON.stringify(sepSave));
+    }
+    if (n === 0) {
+      return null;
+    }
+    if (sep === "") {
+      return strings._explode(s, n);
+    }
+    if (n < 0) {
+      n = strings.count(s, sep) + 1;
+    }
+
+    var a = new Array(n);
+    n--;
+    var i = 0;
+    for (; i < n; ) {
+      var m = strings.index(s, sep);
+      if (m < 0) {
+        break;
+      }
+      a[i] = s.slice(0, m+sepSave);
+      s = s.slice(m+sep.length);
+      i++;
+    }
+    a[i] = s;
+    return a.slice(0, i+1);
+  },
+
+  _explode: function(s, n) {
+    var l = 0;
+    for (const c of s) {
+      l++;
+    }
+    if (n < 0 || n > l) {
+      n = l;
+    }
+    var a = new Array(n);
+    var i = 0;
+    for (const c of s) {
+      a[i] = c;
+      s = s.slice(c.length);
+      i += c.length;
+      if (i >= (n -1)) {
+        break;
+      }
+    }
+    if (n > 0) {
+      a[n-1] = s;
+    }
+    return a;
+  },
+
+  // Split slices s into all substrings separated by sep and returns a slice of
+  // the substrings between those separators.
+  //
+  // If s does not contain sep and sep is not empty, Split returns a
+  // slice of length 1 whose only element is s.
+  //
+  // If sep is empty, Split splits after each UTF-8 sequence. If both s
+  // and sep are empty, Split returns an empty slice.
+  //
+  // It is equivalent to SplitN with a count of -1.
+  split: function(s, sep) {
+    areStrings([s, sep]);
+    return strings._genSplit(s, sep, 0, -1);
+  },
+
+
+  // SplitAfter slices s into all substrings after each instance of sep and
+  // returns a slice of those substrings.
+  //
+  // If s does not contain sep and sep is not empty, SplitAfter returns
+  // a slice of length 1 whose only element is s.
+  //
+  // If sep is empty, SplitAfter splits after each UTF-8 sequence. If
+  // both s and sep are empty, SplitAfter returns an empty slice.
+  //
+  // It is equivalent to SplitAfterN with a count of -1.
+  splitAfter: function(s, sep) {
+    areStrings([s, sep]);
+    return strings._genSplit(s, sep, sep.length, -1);
+  },
+
+  // SplitAfterN slices s into substrings after each instance of sep and
+  // returns a slice of those substrings.
+  //
+  // The count determines the number of substrings to return:
+  //   n > 0: at most n substrings; the last substring will be the unsplit remainder.
+  //   n == 0: the result is nil (zero substrings)
+  //   n < 0: all substrings
+  //
+  // Edge cases for s and sep (for example, empty strings) are handled
+  // as described in the documentation for SplitAfter.
+  splitAfterN: function(s, sep, n) {
+    areStrings([s, sep]);
+    return strings._genSplit(s, sep, sep.length, n);
+  },
+
+  // SplitN slices s into substrings separated by sep and returns a slice of
+  // the substrings between those separators.
+  //
+  // The count determines the number of substrings to return:
+  //   n > 0: at most n substrings; the last substring will be the unsplit remainder.
+  //   n == 0: the result is nil (zero substrings)
+  //   n < 0: all substrings
+  //
+  // Edge cases for s and sep (for example, empty strings) are handled
+  // as described in the documentation for Split.
+  splitN: function(s, sep, n) {
+    areStrings([s, sep]);
+    return strings._genSplit(s, sep, 0, n);
   },
 };
 

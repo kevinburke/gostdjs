@@ -1,10 +1,12 @@
 "use strict";
-require('should');
+const should = require('should');
 
 const strings = require("./strings.js");
 const unicode = require("../unicode/unicode.js");
 const utf8 = require("../unicode/utf8/utf8.js");
 
+var abcd = "abcd";
+var commas = "1,2,3,4";
 var dots = "1....2....3....4";
 var faces = "☺☻☹";
 
@@ -542,6 +544,108 @@ describe("strings", function() {
       var got = strings.repeat(test[0], test[2]);
       got.should.eql(test[1], i.toString() + ": repeat("+ JSON.stringify(test[0]) + ", " + JSON.stringify(test[2])+ "), got " + JSON.stringify(got) + ", want " + JSON.stringify(test[2]));
 
+    }
+  });
+
+  var replaceTests = [
+    ["hello", "l", "L", 0, "hello"],
+    ["hello", "l", "L", -1, "heLLo"],
+    ["hello", "x", "X", -1, "hello"],
+    ["", "x", "X", -1, ""],
+    ["radar", "r", "<r>", -1, "<r>ada<r>"],
+    ["", "", "<>", -1, "<>"],
+    ["banana", "a", "<>", -1, "b<>n<>n<>"],
+    ["banana", "a", "<>", 1, "b<>nana"],
+    ["banana", "a", "<>", 1000, "b<>n<>n<>"],
+    ["banana", "an", "<>", -1, "b<><>a"],
+    ["banana", "ana", "<>", -1, "b<>na"],
+    ["banana", "", "<>", -1, "<>b<>a<>n<>a<>n<>a<>"],
+    ["banana", "", "<>", 10, "<>b<>a<>n<>a<>n<>a<>"],
+    ["banana", "", "<>", 6, "<>b<>a<>n<>a<>n<>a"],
+    ["banana", "", "<>", 5, "<>b<>a<>n<>a<>na"],
+    ["banana", "", "<>", 1, "<>banana"],
+    ["banana", "a", "a", -1, "banana"],
+    ["banana", "a", "a", 1, "banana"],
+    ["☺☻☹", "", "<>", -1, "<>☺<>☻<>☹<>"],
+  ];
+
+  it("replace", function() {
+    for (var i = 0; i < replaceTests.length; i++) {
+      var test = replaceTests[i];
+      var got = strings.replace(test[0], test[1], test[2], test[3]);
+      got.should.eql(test[4], i.toString() + ": replace("+ JSON.stringify(test[0]) +
+        ", " + JSON.stringify(test[1]) + ", " + JSON.stringify(test[2]) + ", " +
+        JSON.stringify(test[3]) + "), got " + JSON.stringify(got) +
+        ", want " + JSON.stringify(test[4]));
+
+    }
+  });
+
+  var splitTests = [
+    ["", "", -1, []],
+    [abcd, "", 2, ["a", "bcd"]],
+    [abcd, "", 4, ["a", "b", "c", "d"]],
+    [abcd, "", -1, ["a", "b", "c", "d"]],
+    [faces, "", -1, ["☺", "☻", "☹"]],
+    [faces, "", 3, ["☺", "☻", "☹"]],
+    [faces, "", 17, ["☺", "☻", "☹"]],
+    ["☺�☹", "", -1, ["☺", "�", "☹"]],
+    [abcd, "a", 0, null],
+    [abcd, "a", -1, ["", "bcd"]],
+    [abcd, "z", -1, ["abcd"]],
+    [commas, ",", -1, ["1", "2", "3", "4"]],
+    [dots, "...", -1, ["1", ".2", ".3", ".4"]],
+    [faces, "☹", -1, ["☺☻", ""]],
+    [faces, "~", -1, [faces]],
+    ["1 2 3 4", " ", 3, ["1", "2", "3 4"]],
+    ["1 2", " ", 3, ["1", "2"]],
+  ];
+
+  it("split|splitN", function() {
+    for (var i = 0; i < splitTests.length; i++) {
+      var test = splitTests[i];
+      var got = strings.splitN(test[0], test[1], test[2]);
+      should(got).eql(test[3], "splitN("+JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
+      if (test[2] !== -1) {
+        continue;
+      }
+      if (got !== null) {
+        var s = strings.join(got, test[1]);
+        s.should.eql(test[0], "join(" + JSON.stringify(got) + ", \"\"): got " + JSON.stringify(s) + ", want " + JSON.stringify(test[0]));
+      }
+      var got = strings.split(test[0], test[1]);
+      got.should.eql(test[3], "split("+JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
+    }
+  });
+
+  var splitAfterTests = [
+    [abcd, "a", -1, ["a", "bcd"]],
+    [abcd, "z", -1, ["abcd"]],
+    [abcd, "", -1, ["a", "b", "c", "d"]],
+    [commas, ",", -1, ["1,", "2,", "3,", "4"]],
+    [dots, "...", -1, ["1...", ".2...", ".3...", ".4"]],
+    [faces, "☹", -1, ["☺☻☹", ""]],
+    [faces, "~", -1, [faces]],
+    [faces, "", -1, ["☺", "☻", "☹"]],
+    ["1 2 3 4", " ", 3, ["1 ", "2 ", "3 4"]],
+    ["1 2 3", " ", 3, ["1 ", "2 ", "3"]],
+    ["1 2", " ", 3, ["1 ", "2"]],
+    ["123", "", 2, ["1", "23"]],
+    ["123", "", 17, ["1", "2", "3"]],
+  ];
+
+  it("splitAfter|splitAfterN", function() {
+    for (var i = 0; i < splitAfterTests.length; i++) {
+      var test = splitAfterTests[i];
+      var got = strings.splitAfterN(test[0], test[1], test[2]);
+      got.should.eql(test[3], "splitAfter("+JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
+      var s = strings.join(got, "");
+      s.should.eql(test[0], "join(" + JSON.stringify(got) + "): got " + JSON.stringify(s), ", want " + JSON.stringify(test[0]));
+      if (test[2] !== -1) {
+        continue;
+      }
+      got = strings.splitAfter(test[0], test[1]);
+      got.should.eql(test[3], "splitAfter("+JSON.stringify(test[0]) + ", " + JSON.stringify(test[1]) + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[3]));
     }
   });
 });
