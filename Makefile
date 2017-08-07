@@ -17,6 +17,8 @@ lint: $(ESLINT)
 		--rule='{"eqeqeq": [2]}' \
 		--rule='{"linebreak-style": [ 2, "unix" ]}' \
 		--rule='{"indent": [ 0, 2 ]}' \
+		--rule='{"curly": "error"}' \
+		--rule='{brace-style: ["error", "1tbs", { "allowSingleLine": true }]}' \
 		.
 
 $(TT): | node_modules/.bin
