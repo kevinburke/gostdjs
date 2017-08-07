@@ -658,6 +658,8 @@ describe("strings", function() {
     ["double-blind", "Double-Blind"],
     ["ÿøû", "Ÿøû"],
     ["with_underscore", "With_underscore"],
+    // TODO check that I converted this test to utf-16 correctly and that it
+    // does the right thing now.
     ["unicode \u2028 line separator", "Unicode \u2028 Line Separator"],
   ];
 
@@ -666,6 +668,22 @@ describe("strings", function() {
       var test = titleTests[i];
       var got = strings.title(test[0]);
       got.should.equal(test[1], "title("+ test[0] + "): got " + JSON.stringify(got) + ", want " + JSON.stringify(test[1]));
+    }
+  });
+
+  var lowerTests =[
+    ["", ""],
+    ["abc", "abc"],
+    ["AbC123", "abc123"],
+    ["azAZ09_", "azaz09_"],
+    ["\u2C6D\u2C6D\u2C6D\u2C6D\u2C6D", "\u0251\u0251\u0251\u0251\u0251"], // shrinks one byte per char
+  ];
+
+  it("toLower", function() {
+    for (var i = 0; i < lowerTests.length; i++) {
+      var test = lowerTests[i];
+      var got = strings.toLower(test[0]);
+      got.should.equal(test[1]);
     }
   });
 });

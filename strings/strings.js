@@ -790,6 +790,13 @@ var strings = {
     };
     return strings.map(f, s);
   },
+
+  // ToLower returns a copy of the string s with all Unicode letters mapped to
+  // their lower case.
+  toLower: function(s) {
+    areStrings([s]);
+    return strings.map(unicode.toLower, s);
+  },
 };
 
 module.exports = strings;

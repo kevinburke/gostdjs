@@ -121,6 +121,20 @@ var unicode = {
     return isExcludingLatin(tables.Upper, i);
   },
 
+  // ToLower maps the rune to lower case.
+  toLower: function(i) {
+    if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
+      throw new Error("Invalid rune: " + JSON.stringify(i));
+    }
+    if (i <= unicode.maxAscii) {
+      if (A <= i && i <= Z) { // title case is upper case for ASCII
+        i += a - A;
+      }
+      return i;
+    }
+    return unicode.to(unicode.lowerCase, i);
+  },
+
   toTitle: function(i) {
     if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
       throw new Error("Invalid rune: " + JSON.stringify(i));

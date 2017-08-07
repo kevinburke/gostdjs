@@ -342,4 +342,17 @@ describe("unicode", function() {
     }
   });
 
+  it("toLower", function() {
+    var count = 0;
+    for (var i = 0; i < caseTest.length; i++) {
+      var test = caseTest[i];
+      if (test[0] !== unicode.lowerCase) {
+        continue;
+      }
+      count++;
+      var r = unicode.toLower(test[1])
+      r.should.equal(test[2]);
+    }
+    (count > 0).should.equal(true);
+  });
 });
