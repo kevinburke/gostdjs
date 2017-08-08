@@ -120,7 +120,7 @@ Uint64.prototype._mul = function _mul(bhi, blo) {
 };
 
 Uint64.prototype.imul = function imul(b) {
-  assert(b && typeof b === 'object');
+  assert(b && typeof b === 'object', "Expected " + JSON.stringify(b) + " to be a Uint64 object");
   return this._mul(b.hi, b.lo);
 };
 
@@ -661,7 +661,7 @@ Uint64.prototype.cmpn = function cmpn(num) {
 };
 
 Uint64.prototype.eq = function eq(b) {
-  assert(b && typeof b === 'object');
+  assert(b && typeof b === 'object', "expected eq to compare against object, got " + JSON.stringify(b));
   return this.hi === b.hi && this.lo === b.lo;
 };
 
@@ -1316,8 +1316,7 @@ Int64.prototype.idiv = function idiv(b) {
   q = this.set(0);
   bit = n.bitLength();
 
-  r = new this.constructor();
-  r.signed = false;
+  r = new Uint64();
 
   while (bit--) {
     r.ishln(1);
@@ -1827,7 +1826,7 @@ Int64.prototype.cmpn = function cmpn(num) {
 };
 
 Int64.prototype.eq = function eq(b) {
-  assert(b && typeof b === 'object');
+  assert(b && typeof b === 'object', "expected to compare to object but got " + JSON.stringify(b));
   return this.hi === b.hi && this.lo === b.lo;
 };
 
@@ -2136,7 +2135,7 @@ Int64.prototype.fromString = function fromString(str, base) {
 Int64.prototype.fromObject = function fromObject(num) {
   assert(num && typeof num === 'object');
 
-  return this.fromBits(num.hi, num.lo, signed);
+  return this.fromBits(num.hi, num.lo);
 };
 
 Int64.prototype.fromBN = function fromBN(num) {
