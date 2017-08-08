@@ -1,7 +1,10 @@
 "use strict";
 // Package strings implements simple functions to manipulate UTF-8 encoded strings.
 
+const internal = require("../internal/index.js");
 const unicode = require("../unicode/unicode.js");
+
+var strings;
 
 // primeRK is the prime base used in Rabin-Karp algorithm.
 const primeRK = 16777619;
@@ -16,6 +19,23 @@ for (var i = 0; i < 256; i++) {
     asciiSpace[i] = 0;
   }
 }
+
+var toUint32 = function(x) {
+  // the shift operator forces js to perform the internal ToUint32 (see ecmascript spec 9.6)
+  return x >>> 0;
+};
+
+var uint32mul = function(x, y) {
+  var high16 =  ((x & 0xffff0000) >>> 0) * y;
+  var low16 = (x & 0x0000ffff) * y;
+  // the addition is dangerous, because the result will be rounded, so the result depends on the lowest bits, which will be cut away!
+  var carry = (toUint32(high16) + toUint32(low16)) > maxUint32;
+  if (carry === true) {
+    return ((high16 >>> 0) + (low16 >>> 0)) >>> 0;
+  } else {
+    return (high16 >>> 0) + (low16 >>> 0);
+  }
+};
 
 var isString = function(val) {
   return typeof val === "string" || val instanceof String;
@@ -53,21 +73,10 @@ var isSeparator = function(i) {
   return unicode.isSpace(i);
 };
 
-var areStrings = function(args) {
-  if (!Array.isArray(args)) {
-    throw new Error("args should be an array, got " + JSON.stringify(args));
-  }
-  for (var i = 0; i < args.length; i++) {
-    if (!isString(args[i])) {
-      throw new Error("not a string: " + JSON.stringify(args[i]));
-    }
-  }
-};
-
 // hashStr returns the hash and the appropriate multiplicative
 // factor for use in Rabin-Karp algorithm.
 var hashStr = function(sep) {
-  areStrings([sep]);
+  internal.areStrings([sep]);
   var hash = 0;
   for (var i = 0; i < sep.length; i++) {
     hash = uint32mul(hash, primeRK) + sep[i].charCodeAt(0);
@@ -84,7 +93,7 @@ var hashStr = function(sep) {
 };
 
 var hashStrRev = function(sep) {
-  areStrings([sep]);
+  internal.areStrings([sep]);
   var hash = 0;
   for (var i = sep.length - 1; i >= 0; i--) {
     hash = uint32mul(hash, primeRK) + sep[i].charCodeAt(0);
@@ -100,23 +109,6 @@ var hashStrRev = function(sep) {
   return [hash, pow];
 };
 
-var toUint32 = function(x) {
-  // the shift operator forces js to perform the internal ToUint32 (see ecmascript spec 9.6)
-  return x >>> 0;
-};
-
-var uint32mul = function(x, y) {
-  var high16 =  ((x & 0xffff0000) >>> 0) * y;
-  var low16 = (x & 0x0000ffff) * y;
-  // the addition is dangerous, because the result will be rounded, so the result depends on the lowest bits, which will be cut away!
-  var carry = (toUint32(high16) + toUint32(low16)) > maxUint32;
-  if (carry === true) {
-    return ((high16 >>> 0) + (low16 >>> 0)) >>> 0;
-  } else {
-    return (high16 >>> 0) + (low16 >>> 0);
-  }
-};
-
 var uint32sub = function(x, y) {
   if (x > y) {
     return x - y;
@@ -125,7 +117,7 @@ var uint32sub = function(x, y) {
 };
 
 var makeCutsetFunc = function(cutset) {
-  areStrings([cutset]);
+  internal.areStrings([cutset]);
   if (cutset.length === 1 && cutset.codePointAt(0) < 0x80) {
     var cp = cutset.codePointAt(0);
     return function(i) { return i === cp; };
@@ -136,7 +128,7 @@ var makeCutsetFunc = function(cutset) {
   };
 };
 
-var strings = {
+strings = {
   _uint32mul: uint32mul,
 
   // Compare returns an integer comparing two strings lexicographically. The
@@ -147,7 +139,7 @@ var strings = {
   // Note compare uses the Javascript notions of string equality, not the Go
   // notions.
   compare: function(a, b) {
-    areStrings([a, b]);
+    internal.areStrings([a, b]);
     if (a === b) {
       return 0;
     }
@@ -159,13 +151,13 @@ var strings = {
 
   // Contains reports whether substr is within s.
   contains: function(s, substr) {
-    areStrings([s, substr]);
+    internal.areStrings([s, substr]);
     return strings.index(s, substr) >= 0;
   },
 
   // ContainsAny reports whether any Unicode code points in chars are within s.
   containsAny: function(s, chars) {
-    areStrings([s, chars]);
+    internal.areStrings([s, chars]);
     return strings.indexAny(s, chars) >= 0;
   },
 
@@ -173,7 +165,7 @@ var strings = {
   // substr is an empty string, Count returns 1 + the number of Unicode code
   // points in s.
   count: function(s, substr) {
-    areStrings([s, substr]);
+    internal.areStrings([s, substr]);
     if (substr === "") {
       return s.length + 1;
     }
@@ -191,7 +183,7 @@ var strings = {
   // EqualFold reports whether s and t, interpreted as UTF-8 strings, are equal
   // under Unicode case-folding.
   equalFold: function(s, t) {
-    areStrings([s, t]);
+    internal.areStrings([s, t]);
     s = s.normalize();
     t = t.normalize();
     var cmp = s.localeCompare(t, [], {sensitivity: "base"});
@@ -202,7 +194,7 @@ var strings = {
   // white space characters, as defined by unicode.IsSpace, returning an array
   // of substrings of s or an empty list if s contains only white space.
   fields: function(s) {
-    areStrings([s]);
+    internal.areStrings([s]);
     var a = [];
     var i = 0;
     // Skip spaces in the front of the input.
@@ -260,10 +252,8 @@ var strings = {
   //
   // f will be called with a uint32 and should always return a boolean.
   fieldsFunc: function(s, f) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("fieldsFunc must be passed a function");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
     // First count the fields.
     var n = 0;
     var inField = false;
@@ -307,20 +297,20 @@ var strings = {
 
   // HasPrefix tests whether the string s begins with prefix.
   hasPrefix: function(s, prefix) {
-    areStrings([s, prefix]);
+    internal.areStrings([s, prefix]);
     return s.length >= prefix.length && s.slice(0, prefix.length) === prefix;
   },
 
   // HasSuffix tests whether the string s ends with suffix.
   hasSuffix: function(s, suffix) {
-    areStrings([s, suffix]);
+    internal.areStrings([s, suffix]);
     return s.length >= suffix.length && s.slice(s.length-suffix.length) === suffix;
   },
 
   // Index returns the index of the first instance of substr in s, or -1 if
   // substr is not present in s.
   index: function(s, substr) {
-    areStrings([s, substr]);
+    internal.areStrings([s, substr]);
     var n = substr.length;
     if (n === 0) {
       return 0;
@@ -359,12 +349,7 @@ var strings = {
   // IndexAny returns the index of the first instance of any Unicode code point
   // from chars in s, or -1 if no Unicode code point from chars is present in s.
   indexAny: function(s, chars) {
-    if (!isString(s)) {
-      throw new Error("not a string: " + JSON.stringify(s));
-    }
-    if (!isString(chars)) {
-      throw new Error("not a string: " + JSON.stringify(chars));
-    }
+    internal.areStrings([s, chars]);
     if (chars.length > 0) {
       var i = 0;
       for (const c of s) {
@@ -382,7 +367,7 @@ var strings = {
   // IndexByte returns the index of the first instance of c in s, or -1 if c is
   // not present in s.
   indexByte: function(s, i) {
-    areStrings([s]);
+    internal.areStrings([s]);
     if (!Number.isInteger(i) || i < 0 || i > 256) {
       throw new Error("Invalid byte: " + JSON.stringify(i));
     }
@@ -418,13 +403,9 @@ var strings = {
   // truth==false, the sense of the predicate function is
   // inverted.
   _indexFunc: function(s, f, truth) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("indexFunc must be passed a function");
-    }
-    if (truth !== true && truth !== false) {
-      throw new Error("indexFunc must be passed a boolean");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
+    internal.isBool(truth);
     var i = 0;
     for (const c of s) {
       var result = f(c.codePointAt(0));
@@ -443,13 +424,9 @@ var strings = {
   // truth==false, the sense of the predicate function is
   // inverted.
   _lastIndexFunc: function(s, f, truth) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("lastIndexFunc must be passed a function");
-    }
-    if (truth !== true && truth !== false) {
-      throw new Error("lastIndexFunc must be passed a boolean");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
+    internal.isBool(truth);
     // once through using the iterator, to get all of the code points.
     var s1 = [];
     for (const c of s) {
@@ -474,7 +451,7 @@ var strings = {
   //
   // i should be an integer.
   indexRune: function(s, i) {
-    areStrings([s]);
+    internal.areStrings([s]);
     if (!Number.isInteger(i) || i < 0 || i > unicode.maxRune) {
       throw new Error("Invalid rune: " + JSON.stringify(i));
     }
@@ -484,14 +461,14 @@ var strings = {
   // Join concatenates the elements of a to create a single string. The
   // separator string sep is placed between elements in the resulting string.
   join: function(a, sep) {
-    areStrings([sep]);
+    internal.areStrings([sep]);
     if (Array.isArray(a) === false) {
       throw new Error("join: first argument should be an array, got: " + JSON.stringify(a));
     }
     if (a.length === 0) {
       return "";
     }
-    areStrings(a);
+    internal.areStrings(a);
     var b = a[0];
     for (var i = 1; i < a.length; i++) {
       b = b.concat(sep);
@@ -503,7 +480,7 @@ var strings = {
   // LastIndex returns the index of the last instance of substr in s, or -1 if
   // substr is not present in s.
   lastIndex: function(s, substr) {
-    areStrings([s, substr]);
+    internal.areStrings([s, substr]);
     if (substr.length === 0) {
       return s.length;
     }
@@ -541,7 +518,7 @@ var strings = {
   // point from chars in s, or -1 if no Unicode code point from chars is present
   // in s.
   lastIndexAny: function(s, chars) {
-    areStrings([s, chars]);
+    internal.areStrings([s, chars]);
     if (chars.length === 0) {
       return -1;
     }
@@ -567,7 +544,7 @@ var strings = {
   //
   // i should be an integer between 0 and 256.
   lastIndexByte: function(s, i) {
-    areStrings([s]);
+    internal.areStrings([s]);
     if (!Number.isInteger(i) || i < 0 || i > 256) {
       throw new Error("Invalid byte: " + JSON.stringify(i));
     }
@@ -581,10 +558,8 @@ var strings = {
   // mapping should take an integer between 0 and unicode.maxRune and return an
   // integer, otherwise the behavior of map is not defined.
   map: function(mapping, s) {
-    areStrings([s]);
-    if (typeof mapping !== 'function') {
-      throw new Error("map must be passed a function");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(mapping);
     var s2 = "";
     for (const c of s) {
       var result = mapping(c.codePointAt(0));
@@ -601,7 +576,7 @@ var strings = {
   // It throws an error if count is negative or if the result of
   // (len(s) * count) overflows.
   repeat: function(s, count) {
-    areStrings([s]);
+    internal.areStrings([s]);
     if (!Number.isInteger(count)) {
       throw new Error("strings: count not an integer: " + JSON.stringify(count));
     }
@@ -620,7 +595,7 @@ var strings = {
   // for a k-rune string.
   // If n < 0, there is no limit on the number of replacements.
   replace: function(s, old, new_, n) {
-    areStrings([s, old, new_]);
+    internal.areStrings([s, old, new_]);
     if (!Number.isInteger(n)) {
       throw new Error("strings: n not an integer: " + JSON.stringify(n));
     }
@@ -666,7 +641,7 @@ var strings = {
   // Generic split: splits after each instance of sep,
   // including sepSave bytes of sep in the subarrays.
   _genSplit: function(s, sep, sepSave, n) {
-    areStrings([s, sep]);
+    internal.areStrings([s, sep]);
     if (!Number.isInteger(n)) {
       throw new Error("strings: n not an integer: " + JSON.stringify(n));
     }
@@ -734,7 +709,7 @@ var strings = {
   //
   // It is equivalent to SplitN with a count of -1.
   split: function(s, sep) {
-    areStrings([s, sep]);
+    internal.areStrings([s, sep]);
     return strings._genSplit(s, sep, 0, -1);
   },
 
@@ -750,7 +725,7 @@ var strings = {
   //
   // It is equivalent to SplitAfterN with a count of -1.
   splitAfter: function(s, sep) {
-    areStrings([s, sep]);
+    internal.areStrings([s, sep]);
     return strings._genSplit(s, sep, sep.length, -1);
   },
 
@@ -765,7 +740,7 @@ var strings = {
   // Edge cases for s and sep (for example, empty strings) are handled
   // as described in the documentation for SplitAfter.
   splitAfterN: function(s, sep, n) {
-    areStrings([s, sep]);
+    internal.areStrings([s, sep]);
     return strings._genSplit(s, sep, sep.length, n);
   },
 
@@ -780,14 +755,14 @@ var strings = {
   // Edge cases for s and sep (for example, empty strings) are handled
   // as described in the documentation for Split.
   splitN: function(s, sep, n) {
-    areStrings([s, sep]);
+    internal.areStrings([s, sep]);
     return strings._genSplit(s, sep, 0, n);
   },
 
   // Title returns a copy of the string s with all Unicode letters that begin words
   // mapped to their title case.
   title: function(s) {
-    areStrings([s]);
+    internal.areStrings([s]);
     // Use a closure here to remember state.
     // Hackish but effective. Depends on Map scanning in order and calling
     // the closure once per rune.
@@ -806,14 +781,14 @@ var strings = {
   // ToLower returns a copy of the string s with all Unicode letters mapped to
   // their lower case.
   toLower: function(s) {
-    areStrings([s]);
+    internal.areStrings([s]);
     return strings.map(unicode.toLower, s);
   },
 
   // ToUpper returns a copy of the string s with all Unicode letters mapped to
   // their lower case.
   toUpper: function(s) {
-    areStrings([s]);
+    internal.areStrings([s]);
     return strings.map(unicode.toUpper, s);
   },
 
@@ -838,14 +813,14 @@ var strings = {
   // ToTitle returns a copy of the string s with all Unicode letters mapped to
   // their title case.
   toTitle: function(s) {
-    areStrings([s]);
+    internal.areStrings([s]);
     return strings.map(unicode.toTitle, s);
   },
 
   // Trim returns a slice of the string s with all leading and trailing Unicode
   // code points contained in cutset removed.
   trim: function(s, cutset) {
-    areStrings([s, cutset]);
+    internal.areStrings([s, cutset]);
     if (s === "" || cutset === "") {
       return s;
     }
@@ -855,7 +830,7 @@ var strings = {
   // TrimLeft returns a slice of the string s with all leading Unicode code
   // points contained in cutset removed.
   trimLeft: function(s, cutset) {
-    areStrings([s, cutset]);
+    internal.areStrings([s, cutset]);
     if (s === "" || cutset === "") {
       return s;
     }
@@ -865,7 +840,7 @@ var strings = {
   // TrimRight returns a slice of the string s, with all trailing
   // Unicode code points contained in cutset removed.
   trimRight: function(s, cutset) {
-    areStrings([s, cutset]);
+    internal.areStrings([s, cutset]);
     if (s === "" || cutset === "") {
       return s;
     }
@@ -877,20 +852,16 @@ var strings = {
   // integer argument and return a boolean, otherwise the behavior of this
   // function is not defined.
   trimFunc: function(s, f) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("trimFunc must be passed a function");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
     return strings.trimRightFunc(strings.trimLeftFunc(s, f), f);
   },
 
   // TrimLeftFunc returns a slice of the string s with all leading
   // Unicode code points c satisfying f(c) removed.
   trimLeftFunc: function(s, f) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("trimFunc must be passed a function");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
     var i = strings._indexFunc(s, f, false);
     if (i === -1) {
       return "";
@@ -901,10 +872,8 @@ var strings = {
   // TrimRightFunc returns a slice of the string s with all trailing
   // Unicode code points c satisfying f(c) removed.
   trimRightFunc: function(s, f) {
-    areStrings([s]);
-    if (typeof f !== 'function') {
-      throw new Error("trimFunc must be passed a function");
-    }
+    internal.areStrings([s]);
+    internal.isFunction(f);
     var i = strings._lastIndexFunc(s, f, false);
     if (i === -1) {
       return "";
@@ -916,7 +885,7 @@ var strings = {
   // TrimPrefix returns s without the provided leading prefix string.
   // If s doesn't start with prefix, s is returned unchanged.
   trimPrefix: function(s, prefix) {
-    areStrings([s, prefix]);
+    internal.areStrings([s, prefix]);
     if (strings.hasPrefix(s, prefix)) {
       return s.slice(prefix.length);
     }
@@ -926,7 +895,7 @@ var strings = {
   // TrimSuffix returns s without the provided trailing suffix string.
   // If s doesn't end with suffix, s is returned unchanged.
   trimSuffix: function(s, suffix) {
-    areStrings([s, suffix]);
+    internal.areStrings([s, suffix]);
     if (strings.hasSuffix(s, suffix)) {
       return s.slice(0, s.length-suffix.length);
     }

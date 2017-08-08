@@ -18,14 +18,15 @@ lint: $(ESLINT)
 		--rule='{"linebreak-style": [ 2, "unix" ]}' \
 		--rule='{"indent": [ 0, 2 ]}' \
 		--rule='{"curly": "error"}' \
-		--rule='{brace-style: ["error", "1tbs", { "allowSingleLine": true }]}' \
+		--rule='{"brace-style": ["error", "1tbs", { "allowSingleLine": true }]}' \
+		--rule='{"no-use-before-define": ["error", {functions: true, classes: true, variables: true}]}' \
 		.
 
 $(TT): | node_modules/.bin
 ifeq ($(shell uname -s), Darwin)
-	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.3/tt-darwin-amd64 > $(TT)
+	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.4/tt-darwin-amd64 > $(TT)
 else
-	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.3/tt-linux-amd64 > $(TT)
+	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.4/tt-linux-amd64 > $(TT)
 endif
 	chmod +x $(TT)
 

@@ -66,3 +66,25 @@ func TestIndexRune(t *testing.T) {
 	fmt.Println(strings.IndexRune("\x80test\xff", rune(s[0])))
 	fmt.Println(strings.Trim("\x80test\xff", "\xff"))
 }
+
+func TestUint32(t *testing.T) {
+	i1 := uint32(0xff)<<24 | uint32(0xff)<<16 | uint32(0x91)<<8 | uint32(0x26)
+	i2 := uint64(0xff)<<24 | uint64(0xff)<<16 | uint64(0x91)<<8 | uint64(0x26)
+	if i1 != 4294938918 {
+		t.Errorf("wrong value")
+	}
+	if i2 != 4294938918 {
+		t.Errorf("wrong value")
+	}
+}
+
+func TestEncoding(t *testing.T) {
+	a := []rune("€")
+	fmt.Println(utf16.Encode(a))
+	if (a[0] & 0xff) != 0xac {
+		t.Errorf("wrong value")
+	}
+	if a[0]>>8&0xff != 0x20 {
+		t.Errorf("wrong value")
+	}
+}

@@ -3,6 +3,44 @@
 var assert = require('assert');
 var mul32 = Math.imul;
 
+const ULONG_MIN = 0x00000000;
+const ULONG_MAX = 0xffffffff;
+
+const LONG_MIN = -0x80000000;
+const LONG_MAX = 0x7fffffff;
+
+const DOUBLE_MIN = -0x001fffffffffffff;
+const DOUBLE_MAX = 0x001fffffffffffff;
+
+var isInteger = function(i) {
+  if (Number.isInteger(i) === false) {
+    throw new TypeError("not an integer: " + JSON.stringify(i));
+  }
+};
+
+var floor = function(n) {
+  if (n < 0) {
+    return -Math.floor(-n);
+  }
+  return Math.floor(n);
+};
+
+var countBits = function(word) {
+  var bit;
+
+  if (Math.clz32) {
+    return 32 - Math.clz32(word);
+  }
+
+  for (bit = 31; bit > 0; bit--) {
+    if ((word & (1 << bit)) !== 0) {
+      break;
+    }
+  }
+
+  return bit + 1;
+};
+
 /**
  * Uint64
  * @constructor
@@ -51,6 +89,7 @@ Uint64.prototype.iadd = function iadd(b) {
 };
 
 Uint64.prototype.iaddn = function iaddn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._add(num < 0 ? -1 : 0, num | 0);
 };
@@ -88,6 +127,7 @@ Uint64.prototype.isub = function isub(b) {
 };
 
 Uint64.prototype.isubn = function isubn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._sub(num < 0 ? -1 : 0, num | 0);
 };
@@ -125,6 +165,7 @@ Uint64.prototype.imul = function imul(b) {
 };
 
 Uint64.prototype.imuln = function imuln(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._mul(num < 0 ? -1 : 0, num | 0);
 };
@@ -458,6 +499,7 @@ Uint64.prototype.ishr = function ishr(b) {
 };
 
 Uint64.prototype.ishrn = function ushrn(bits) {
+  isInteger(bits);
   var hi = this.hi;
   var lo = this.lo;
 
@@ -483,6 +525,7 @@ Uint64.prototype.iushr = function iushr(b) {
 };
 
 Uint64.prototype.iushrn = function ushrn(bits) {
+  isInteger(bits);
   var hi = this.hi;
   var lo = this.lo;
 
@@ -522,6 +565,7 @@ Uint64.prototype.ushrn = function ushrn(bits) {
  */
 
 Uint64.prototype.setn = function setn(bit, val) {
+  isInteger(bit);
   assert(bit >= 0);
 
   bit &= 63;
@@ -544,6 +588,7 @@ Uint64.prototype.setn = function setn(bit, val) {
 };
 
 Uint64.prototype.testn = function testn(bit) {
+  isInteger(bit);
   assert(bit >= 0);
 
   bit &= 63;
@@ -556,6 +601,7 @@ Uint64.prototype.testn = function testn(bit) {
 };
 
 Uint64.prototype.imaskn = function imaskn(bit) {
+  isInteger(bit);
   assert(bit >= 0);
 
   bit &= 63;
@@ -575,6 +621,7 @@ Uint64.prototype.maskn = function maskn(bit) {
 };
 
 Uint64.prototype.andln = function andln(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.lo & num;
 };
@@ -651,21 +698,29 @@ Uint64.prototype._cmp = function _cmp(bhi, blo) {
 };
 
 Uint64.prototype.cmp = function cmp(b) {
+  if (Uint64.isUint64(b) !== true) {
+    throw new Error("eq: attempted to compare Uint64 to non-uint64 obj: " + JSON.stringify(b));
+  }
   assert(b && typeof b === 'object');
   return this._cmp(b.hi, b.lo);
 };
 
 Uint64.prototype.cmpn = function cmpn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._cmp(num < 0 ? -1 : 0, num | 0);
 };
 
 Uint64.prototype.eq = function eq(b) {
   assert(b && typeof b === 'object', "expected eq to compare against object, got " + JSON.stringify(b));
+  if (Uint64.isUint64(b) !== true) {
+    throw new Error("eq: attempted to compare Uint64 to non-uint64 obj: " + JSON.stringify(b));
+  }
   return this.hi === b.hi && this.lo === b.lo;
 };
 
 Uint64.prototype.eqn = function eqn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.hi === (num < 0 ? -1 : 0) && this.lo === (num | 0);
 };
@@ -761,6 +816,7 @@ Uint64.prototype.join = function join(hi, lo) {
 };
 
 Uint64.prototype.small = function small(num) {
+  isInteger(num);
   var n = new this.constructor();
   n.hi = num < 0 ? -1 : 0;
   n.lo = num | 0;
@@ -1006,6 +1062,9 @@ Uint64.prototype.from = function from(num, base) {
   }
 
   if (typeof num === 'number') {
+    if (typeof base === 'number') {
+      return this.fromBits(num, base);
+    }
     return this.fromNumber(num);
   }
 
@@ -1020,7 +1079,7 @@ Uint64.prototype.from = function from(num, base) {
     return this.fromObject(num);
   }
 
-  throw new Error('Not a number.');
+  throw new TypeError('Not a number.');
 };
 
 Uint64.prototype.inspect = function inspect() {
@@ -1066,39 +1125,15 @@ Uint64.fromBN = function fromBN(num) {
 };
 
 Uint64.from = function from(num, base) {
+  if (num === null || typeof num === 'undefined') {
+    throw new Error("must specify a number");
+  }
   return new Uint64().from(num, base);
 };
 
 Uint64.isUint64 = function isUint64(obj) {
   return obj instanceof Uint64;
 };
-
-/*
- * Helpers
- */
-
-function countBits(word) {
-  var bit;
-
-  if (Math.clz32) {
-    return 32 - Math.clz32(word);
-  }
-
-  for (bit = 31; bit > 0; bit--) {
-    if ((word & (1 << bit)) !== 0) {
-      break;
-    }
-  }
-
-  return bit + 1;
-}
-
-function floor(n) {
-  if (n < 0) {
-    return -Math.floor(-n);
-  }
-  return Math.floor(n);
-}
 
 function _mul32(a, b) {
   var alo = a & 0xffff;
@@ -1168,11 +1203,12 @@ Int64.prototype._add = function _add(bhi, blo) {
 };
 
 Int64.prototype.iadd = function iadd(b) {
-  assert(b && typeof b === 'object');
+  assert(b && typeof b === 'object', "64 bit add() should take an Int64 object. Use addn for adding JS numbers");
   return this._add(b.hi, b.lo);
 };
 
 Int64.prototype.iaddn = function iaddn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._add(num < 0 ? -1 : 0, num | 0);
 };
@@ -1210,6 +1246,7 @@ Int64.prototype.isub = function isub(b) {
 };
 
 Int64.prototype.isubn = function isubn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._sub(num < 0 ? -1 : 0, num | 0);
 };
@@ -1247,6 +1284,7 @@ Int64.prototype.imul = function imul(b) {
 };
 
 Int64.prototype.imuln = function imuln(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._mul(num < 0 ? -1 : 0, num | 0);
 };
@@ -1268,7 +1306,7 @@ Int64.prototype.idiv = function idiv(b) {
   var neg = false;
   var n, d, q, r, bit;
 
-  assert(b && typeof b === 'object');
+  assert(b && typeof b === 'object', "cannot divide by non-Int64 object");
 
   if (b.isZero()) {
     throw new Error('Cannot divide by zero.');
@@ -1335,6 +1373,7 @@ Int64.prototype.idiv = function idiv(b) {
 };
 
 Int64.prototype.idivn = function idivn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.idiv(this.small(num));
 };
@@ -1380,6 +1419,7 @@ Int64.prototype.imod = function imod(b) {
 };
 
 Int64.prototype.imodn = function imodn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.imod(this.small(num));
 };
@@ -1547,6 +1587,7 @@ Int64.prototype.ishl = function ishl(b) {
 };
 
 Int64.prototype.ishln = function ishln(bits) {
+  isInteger(bits);
   var hi = this.hi;
   var lo = this.lo;
 
@@ -1592,6 +1633,7 @@ Int64.prototype.ishr = function ishr(b) {
 };
 
 Int64.prototype.ishrn = function ushrn(bits) {
+  isInteger(bits);
   var hi = this.hi;
   var lo = this.lo;
 
@@ -1637,6 +1679,7 @@ Int64.prototype.iushr = function iushr(b) {
 };
 
 Int64.prototype.iushrn = function ushrn(bits) {
+  isInteger(bits);
   var hi = this.hi;
   var lo = this.lo;
 
@@ -1698,6 +1741,7 @@ Int64.prototype.setn = function setn(bit, val) {
 };
 
 Int64.prototype.testn = function testn(bit) {
+  isInteger(bit);
   assert(bit >= 0);
 
   bit &= 63;
@@ -1710,6 +1754,7 @@ Int64.prototype.testn = function testn(bit) {
 };
 
 Int64.prototype.imaskn = function imaskn(bit) {
+  isInteger(bit);
   assert(bit >= 0);
 
   bit &= 63;
@@ -1729,6 +1774,7 @@ Int64.prototype.maskn = function maskn(bit) {
 };
 
 Int64.prototype.andln = function andln(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.lo & num;
 };
@@ -1816,21 +1862,29 @@ Int64.prototype._cmp = function _cmp(bhi, blo) {
 };
 
 Int64.prototype.cmp = function cmp(b) {
+  if (Int64.isInt64(b) !== true) {
+    throw new Error("eq: attempted to compare Int64 to non-int64 obj: " + JSON.stringify(b));
+  }
   assert(b && typeof b === 'object');
   return this._cmp(b.hi, b.lo);
 };
 
 Int64.prototype.cmpn = function cmpn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this._cmp(num < 0 ? -1 : 0, num | 0);
 };
 
 Int64.prototype.eq = function eq(b) {
   assert(b && typeof b === 'object', "expected to compare to object but got " + JSON.stringify(b));
+  if (Int64.isInt64(b) !== true) {
+    throw new Error("eq: attempted to compare Int64 to non-int64 obj: " + JSON.stringify(b));
+  }
   return this.hi === b.hi && this.lo === b.lo;
 };
 
 Int64.prototype.eqn = function eqn(num) {
+  isInteger(num);
   assert(num >= LONG_MIN && num <= ULONG_MAX);
   return this.hi === (num < 0 ? -1 : 0) && this.lo === (num | 0);
 };
@@ -1926,6 +1980,7 @@ Int64.prototype.join = function join(hi, lo) {
 };
 
 Int64.prototype.small = function small(num) {
+  isInteger(num);
   var n = new this.constructor();
   n.hi = num < 0 ? -1 : 0;
   n.lo = num | 0;
@@ -2177,10 +2232,14 @@ Int64.prototype.fromBN = function fromBN(num) {
 
 Int64.prototype.from = function from(num, base) {
   if (num === null || typeof num === 'undefined') {
+    // used for new Int64().from(...)
     return this;
   }
 
   if (typeof num === 'number') {
+    if (typeof base === 'number') {
+      return this.fromBits(num, base);
+    }
     return this.fromNumber(num);
   }
 
@@ -2195,7 +2254,7 @@ Int64.prototype.from = function from(num, base) {
     return this.fromObject(num);
   }
 
-  throw new Error('Not a number.');
+  throw new TypeError('Not a number.');
 };
 
 Int64.prototype.inspect = function inspect() {
@@ -2240,6 +2299,9 @@ Int64.fromBN = function fromBN(num) {
 };
 
 Int64.from = function from(num, base) {
+  if (num === null || typeof num === 'undefined') {
+    throw new Error("must specify a number");
+  }
   return new Int64().from(num, base);
 };
 
@@ -2251,23 +2313,15 @@ Int64.isInt64 = function isInt64(obj) {
  * Constants
  */
 
-const ULONG_MIN = 0x00000000;
-const ULONG_MAX = 0xffffffff;
-
-const LONG_MIN = -0x80000000;
-const LONG_MAX = 0x7fffffff;
-
-const DOUBLE_MIN = -0x001fffffffffffff;
-const DOUBLE_MAX = 0x001fffffffffffff;
-
-const UINT32_MIN = Int64(0x00000000, 0x00000000);
-const UINT32_MAX = Int64(0x00000000, 0xffffffff);
+const UINT32_MIN = Uint64(0x00000000, 0x00000000);
+const UINT32_MAX = Uint64(0x00000000, 0xffffffff);
+assert(UINT32_MAX.toNumber() > 0);
 
 const INT32_MIN = Int64(0xffffffff, 0x80000000, true);
 const INT32_MAX = Int64(0x00000000, 0x7fffffff, true);
 
-const UINT64_MIN = Int64(0x00000000, 0x00000000);
-const UINT64_MAX = Int64(0xffffffff, 0xffffffff);
+const UINT64_MIN = Uint64(0x00000000, 0x00000000);
+const UINT64_MAX = Uint64(0xffffffff, 0xffffffff);
 
 const INT64_MIN = Int64(0x80000000, 0x00000000, true);
 const INT64_MAX = Int64(0x7fffffff, 0xffffffff, true);
@@ -2295,4 +2349,6 @@ module.exports = {
 
   INT64_MIN: INT64_MIN,
   INT64_MAX: INT64_MAX,
+
+  isInteger: isInteger,
 };

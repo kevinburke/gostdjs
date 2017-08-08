@@ -958,4 +958,12 @@ describe('uint64', function() {
     assert.strictEqual(MAX_SAFE.clone().addn(1).isSafe(), false);
     assert.strictEqual(MAX_SAFE_MAX.clone().addn(1).isSafe(), false);
   });
+
+  it("shouldn't allow muln of object", function() {
+    var a = Uint64.from(3);
+    var b = Uint64.from(13);
+    assert.throws(function() {
+      a.muln(b);
+    }, /not an integer/);
+  });
 });

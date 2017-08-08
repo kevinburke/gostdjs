@@ -148,14 +148,14 @@ describe('Int64', function() {
   });
 
   it('should implicitly cast for comparison', function() {
-    var num = UONE.shln(63);
+    var num = Int64.from(1).shln(63);
     assert.strictEqual(num.eq(MIN_I64), true);
     assert.strictEqual(num.cmp(MIN_I64), 0);
     assert.strictEqual(MIN_I64.cmp(num), 0);
-    assert.strictEqual(num.toString(), '9223372036854775808');
+    assert.strictEqual(num.toString(), '-9223372036854775808');
     assert.strictEqual(
-      Uint64.fromString('9223372036854775808').toString(),
-      '9223372036854775808');
+      Int64.fromString('-9223372036854775808').toString(),
+      '-9223372036854775808');
   });
 
   it('should maintain sign after division', function() {
@@ -169,8 +169,8 @@ describe('Int64', function() {
   });
 
   it('should do comparisons', function() {
-    assert.strictEqual(ONE.eq(UONE), true);
-    assert.strictEqual(ONE.cmp(UONE), 0);
+    assert.strictEqual(ONE.eq(UONE.toSigned()), true);
+    assert.strictEqual(ONE.cmp(UONE.toSigned()), 0);
     assert.strictEqual(ONE.cmp(MAX_I64), -1);
     assert.strictEqual(MAX_I64.cmp(ONE), 1);
     assert.strictEqual(ONE.lt(MAX_I64), true);
@@ -179,8 +179,8 @@ describe('Int64', function() {
     assert.strictEqual(MAX_I64.gte(ONE), true);
     assert.strictEqual(MAX_I64.eq(ONE), false);
     assert.strictEqual(ONE.eq(MAX_I64), false);
-    assert.strictEqual(MAX_U64.eq(ONE), false);
-    assert.strictEqual(ONE.eq(MAX_U64), false);
+    assert.strictEqual(MAX_U64.eq(ONE.toUnsigned()), false);
+    assert.strictEqual(ONE.eq(MAX_U64.toSigned()), false);
     assert.strictEqual(ONE.isOdd(), true);
     assert.strictEqual(ONE.isEven(), false);
     assert.strictEqual(MAX_U64.isOdd(), true);
