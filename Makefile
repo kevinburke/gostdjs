@@ -45,6 +45,9 @@ js-test: $(MOCHA) $(SHOULD) $(TT)
 test: js-test
 	go test ./go_compat
 
+docs:
+	yarn add --no-lockfile --exact --dev documentation
+
 ci: lint js-test
 
 clean:
