@@ -1,6 +1,6 @@
 "use strict";
 
-const utf8 = require('./utf8.js');
+const utf8 = require('./');
 
 describe("utf8", function() {
   it("should have constants", function() {

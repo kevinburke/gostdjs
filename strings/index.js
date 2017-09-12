@@ -5,7 +5,7 @@
 // Package strings implements simple functions to manipulate UTF-8 encoded strings.
 
 const internal = require("../internal/index.js");
-const unicode = require("../unicode/unicode.js");
+const unicode = require("../unicode/index.js");
 
 var strings;
 

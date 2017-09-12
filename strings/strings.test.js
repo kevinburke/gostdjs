@@ -4,9 +4,9 @@
 "use strict";
 const should = require('should');
 
-const strings = require("./strings.js");
-const unicode = require("../unicode/unicode.js");
-const utf8 = require("../unicode/utf8/utf8.js");
+const strings = require("./");
+const unicode = require("../unicode");
+const utf8 = require("../unicode/utf8");
 
 var abcd = "abcd";
 var commas = "1,2,3,4";

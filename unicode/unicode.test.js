@@ -4,7 +4,7 @@
 "use strict";
 require("should");
 
-const unicode = require("./unicode.js");
+const unicode = require("./");
 
 describe("unicode", function() {
   var upperTest = [
