@@ -1607,12 +1607,22 @@ time.now = function() {
   return new Time(constants.hasMonotonic.or(seconds.toUnsigned().shln(constants.nsecShift)).or(nsec), mono, location.Local);
 };
 
+/**
+ * sleep(dur time.Duration, cb function())
+ *
+ * Sleep calls cb after at least the duration d. A negative or zero duration
+ * causes Sleep to return immediately.
+ */
 time.sleep = function(dur, cb) {
   if ((dur instanceof Duration) === false) {
     throw new Error("sleep: not passed a Duration (got " + JSON.stringify(dur) + ")");
   }
   if (typeof cb !== "function") {
     throw new Error("sleep: callback should be a function");
+  }
+  if (dur.d.lten(0)) {
+    cb();
+    return;
   }
   setTimeout(cb, dur.d*time.Millisecond);
 };
@@ -2312,6 +2322,20 @@ time.parse = function(layout, value) {
   internal.areStrings([layout, value]);
   return _parse(layout, value, location.UTC, location.Local);
 };
+
+
+// ParseInLocation is like Parse but differs in two important ways.
+// First, in the absence of time zone information, Parse interprets a time as UTC;
+// ParseInLocation interprets the time as in the given location.
+// Second, when given a zone offset or abbreviation, Parse tries to match it
+// against the Local location; ParseInLocation uses the given location.
+time.parseInLocation = function(layout, value, loc) {
+  internal.areStrings([layout, value]);
+  if ((loc instanceof location.Location) === false) {
+    throw new Error("time: missing location in call to parseInLocation");
+  }
+  return _parse(layout, value, loc, loc);
+}
 
 // leadingFraction consumes the leading [0-9]* from s.
 // It is used only for fractions, so does not return an error on overflow,

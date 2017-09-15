@@ -18,7 +18,9 @@ class Slice {
     this.length = this.a.length;
   };
 
-  // from (array of ints)
+  /**
+   * from (array of ints)
+   */
   static from(arr) {
     internal.isArray(arr);
     var a = new Slice(arr.length);
@@ -69,7 +71,9 @@ class Slice {
     return this.a[i];
   }
 
-  // append(Slice, string, [array of integers])
+  /**
+   * append(Slice, string, [array of integers])
+   */
   append(val) {
     if (val instanceof Slice) {
       this.a = this.a.concat(val.a);

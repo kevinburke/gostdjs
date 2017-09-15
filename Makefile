@@ -2,6 +2,7 @@ SHELL = /bin/bash
 
 ESLINT := node_modules/.bin/eslint
 MOCHA := node_modules/.bin/mocha
+REPLACER := $(GOPATH)/bin/comment-replacer
 SHOULD := node_modules/should
 TT := node_modules/.bin/tt
 
@@ -44,6 +45,12 @@ js-test: $(MOCHA) $(SHOULD) $(TT)
 
 test: js-test
 	go test ./go_compat
+
+$(REPLACER): scripts/comment-replacer/main.go
+	go install ./scripts/comment-replacer
+
+replace-comments: $(REPLACER)
+	find . -name 'index.js' -type f | grep -v node_modules | xargs $(REPLACER)
 
 docs:
 	yarn add --no-lockfile --exact --dev documentation
