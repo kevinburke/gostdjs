@@ -41,7 +41,7 @@ $(SHOULD): | node_modules
 	yarn add --no-lockfile --exact --dev should
 
 js-test: $(MOCHA) $(SHOULD) $(TT)
-	find . -name '*.test.js' | xargs tt
+	find . -name '*.test.js' | grep -v node_modules | xargs tt
 
 test: js-test
 	go test ./go_compat
