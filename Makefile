@@ -25,9 +25,9 @@ lint: $(ESLINT)
 
 $(TT): | node_modules/.bin
 ifeq ($(shell uname -s), Darwin)
-	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.4/tt-darwin-amd64 > $(TT)
+	curl --location --silent --output $(TT) https://github.com/kevinburke/tt/releases/download/0.4/tt-darwin-amd64
 else
-	curl --location --silent https://github.com/kevinburke/tt/releases/download/0.4/tt-linux-amd64 > $(TT)
+	curl --location --silent --output $(TT) https://github.com/kevinburke/tt/releases/download/0.4/tt-linux-amd64
 endif
 	chmod +x $(TT)
 
@@ -41,7 +41,7 @@ $(SHOULD): | node_modules
 	yarn add --no-lockfile --exact --dev should
 
 js-test: $(MOCHA) $(SHOULD) $(TT)
-	find . -name '*.test.js' | grep -v node_modules | xargs tt
+	find . -name '*.test.js' | grep -v node_modules | xargs $(TT)
 
 test: js-test
 	go test ./go_compat
