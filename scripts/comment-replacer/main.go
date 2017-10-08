@@ -61,6 +61,13 @@ func main() {
 					buf.WriteByte('\n')
 					continue
 				}
+				if len(l2) >= 3 && l2[:3] == "///" {
+					// hack to avoid having to write a more complicated parser.
+					// documentation-js parses anything with the /** .. */ form
+					// and turns it into a comment. but we don't want comments
+					// inside of a function to be switched.
+				}
+				// if we get here, it's a comment.
 				if !commentStarted {
 					buf.WriteString(whiteSpace)
 					buf.WriteString("/**")

@@ -1,10 +1,15 @@
 // gostdjs version 0.1
 // Copyright 2017 The Go Authors. All rights reserved. Use of this source code
 // is governed by a BSD-style license that can be found in the LICENSE file.
-//
-// TODO: I'm not very happy that the entire contents of the source code must be
-// present in this one file, but I have not been able to find a satisfactory
-// solution that fits with the provided import rules.
+
+/// TODO: I'm not very happy that the entire contents of the source code must be
+/// present in this one file, but I have not been able to find a satisfactory
+/// solution that fits with the provided import rules.
+///
+/// I'm also not very happy about the comment replacer replacing in-function
+/// comments, but the parser would have to get a lot more complicated to detect
+/// comments-in-functions and the number of braces etc.
+/// For the moment the hack is to use three slashes.
 "use strict";
 const bytes = require("../bytes/index.js");
 const internal = require("../internal/index.js");
@@ -23,14 +28,18 @@ var ord = function(s) {
 const zero = ord('0');
 var time = {};
 
-// fmtFrac formats the fraction of v/10**prec (e.g., ".12345") into the
-// buf ending at w, omitting trailing zeros. it omits the decimal
-// point too when the fraction is 0. It returns the index where the
-// output bytes begin and the value v/10**prec.
+/**
+ * fmtFrac formats the fraction of v/10**prec (e.g., ".12345") into the
+ * buf ending at w, omitting trailing zeros. it omits the decimal
+ * point too when the fraction is 0. It returns the index where the
+ * output bytes begin and the value v/10**prec.
+ *
+ * @private
+ */
 var fmtFrac = function(buf, w, v, prec) {
   internal.isUint64(v);
   internal.isInteger(prec);
-  // Omit trailing zeros up to and including decimal point.
+  /// Omit trailing zeros up to and including decimal point.
   var print = false;
   for (var i = 0; i < prec; i++) {
     var digit = v.modn(10);
@@ -49,8 +58,12 @@ var fmtFrac = function(buf, w, v, prec) {
   return [w, v];
 };
 
-// fmtInt formats v into buf starting at w and working toward the beginning.
-// It returns the index where the output begins.
+/**
+ * fmtInt formats v into buf starting at w and working toward the beginning.
+ * It returns the index where the output begins.
+ *
+ * @private
+ */
 var fmtInt = function(buf, w, v) {
   internal.isUint64(v);
   if (v.eqn(0)) {
@@ -139,14 +152,18 @@ class Duration {
     return new Duration(this.d.mod(dur));
   };
 
-  // Returns true if num is less than the duration. Num should be an integer.
+  /**
+   * Returns true if num is less than the duration. Num should be an integer.
+   */
   ltn(num) {
     internal.isInteger(num);
     return this.d.ltn(num);
   }
 
-  // Returns true if num is less than or equal to the duration. Num should be an
-  // integer.
+  /**
+   * Returns true if num is less than or equal to the duration. Num should be an
+   * integer.
+   */
   lten(num) {
     internal.isInteger(num);
     return this.d.lten(num);
@@ -157,12 +174,14 @@ class Duration {
     return this.d.gtn(num);
   }
 
-  // String returns a string representing the duration in the form "72h3m0.5s".
-  // Leading zero units are omitted. As a special case, durations less than one
-  // second format use a smaller unit (milli-, micro-, or nanoseconds) to ensure
-  // that the leading digit is non-zero. The zero duration formats as 0s.
+  /**
+   * String returns a string representing the duration in the form "72h3m0.5s".
+   * Leading zero units are omitted. As a special case, durations less than one
+   * second format use a smaller unit (milli-, micro-, or nanoseconds) to ensure
+   * that the leading digit is non-zero. The zero duration formats as 0s.
+   */
   toString() {
-    // Largest time is 2540400h10m10.000000000s
+    /// Largest time is 2540400h10m10.000000000s
     var buf = new bytes.Slice(32);
     var w = buf.length;
 
@@ -173,8 +192,8 @@ class Duration {
     }
 
     if (u.lt(Second.d.toUnsigned())) {
-      // Special case: if duration is smaller than a second,
-      // use smaller units, like 1.2ms
+      /// Special case: if duration is smaller than a second,
+      /// use smaller units, like 1.2ms
       var prec = 0;
       w--;
       buf.set(w, ord('s'));
@@ -183,17 +202,17 @@ class Duration {
         return "0s";
       }
       if (u.lt(Microsecond.d.toUnsigned())) {
-        // print nanoseconds
+        /// print nanoseconds
         prec = 0;
         buf.set(w, ord('n'));
       } else if (u.lt(Millisecond.d.toUnsigned())) {
-        // print microseconds
+        /// print microseconds
         prec = 3;
-        // U+00B5 'µ' micro sign == 0xC2 0xB5
+        /// U+00B5 'µ' micro sign == 0xC2 0xB5
         w--; // Need room for two bytes.
         bytes.copy(buf, w, "µ");
       } else {
-        // print milliseconds
+        /// print milliseconds
         prec = 6;
         buf.set(w, ord('m'));
       }
@@ -207,19 +226,19 @@ class Duration {
       var fracResults = fmtFrac(buf, w, u, 9);
       w = fracResults[0], u = fracResults[1];
 
-      // u is now integer seconds
+      /// u is now integer seconds
       w = fmtInt(buf, w, u.modn(60));
       u = u.divn(60);
 
-      // u is now integer minutes
+      /// u is now integer minutes
       if (u.gtn(0)) {
         w--;
         buf.set(w, ord('m'));
         w = fmtInt(buf, w, u.modn(60));
         u = u.divn(60);
 
-        // u is now integer hours
-        // Stop at hours because days can be different lengths.
+        /// u is now integer hours
+        /// Stop at hours because days can be different lengths.
         if (u.gtn(0)) {
           w--;
           buf.set(w, ord('h'));
@@ -240,8 +259,10 @@ class Duration {
     return new Duration(this.d);
   };
 
-  // Truncate returns the result of rounding d toward zero to a multiple of m.
-  // If m <= 0, Truncate returns d unchanged.
+  /**
+   * Truncate returns the result of rounding d toward zero to a multiple of m.
+   * If m <= 0, Truncate returns d unchanged.
+   */
   truncate(m) {
     if ((m instanceof Duration) === false) {
       throw new Error("truncate should operate on a Duration");
@@ -273,38 +294,40 @@ Hour = Minute.mul(sixty);
 var minDuration = new Duration(internal.Int64.from(-1).shln(63));
 var maxDuration = new Duration(internal.Int64.from(1).shln(63).subn(1));
 
-// absDate is like date but operates on an absolute time. yday === day of year
-// returns [year, Month, day, yday];
+/**
+ * absDate is like date but operates on an absolute time. yday === day of year
+ * returns [year, Month, day, yday];
+ */
 var absDate = function(abs, full) {
   internal.isBool(full);
   internal.isUint64(abs);
   var d = abs.div(constants.secondsPerDay.toUnsigned());
 
-  // Account for 400 year cycles.
+  /// Account for 400 year cycles.
   var n = d.div(constants.daysPer400Years.toUnsigned());
   var y = n.muln(400);
   d = d.sub((constants.daysPer400Years.toUnsigned()).mul(n));
 
-  // Cut off 100-year cycles.
-  // The last cycle has one extra leap year, so on the last day
-  // of that year, day / constants.daysPer100Years will be 4 instead of 3.
-  // Cut it back down to 3 by subtracting n>>2.
+  /// Cut off 100-year cycles.
+  /// The last cycle has one extra leap year, so on the last day
+  /// of that year, day / constants.daysPer100Years will be 4 instead of 3.
+  /// Cut it back down to 3 by subtracting n>>2.
   n = d.div(constants.daysPer100Years.toUnsigned());
   n = n.sub(n.shrn(2));
   y = y.add(n.muln(100));
   d = d.sub(constants.daysPer100Years.toUnsigned().mul(n));
 
-  // Cut off 4-year cycles.
-  // The last cycle has a missing leap year, which does not
-  // affect the computation.
+  /// Cut off 4-year cycles.
+  /// The last cycle has a missing leap year, which does not
+  /// affect the computation.
   n = d.div(constants.daysPer4Years.toUnsigned());
   y = y.add(n.muln(4));
   d = d.sub(constants.daysPer4Years.toUnsigned().mul(n));
 
-  // Cut off years within a 4-year cycle.
-  // The last year is a leap year, so on the last day of that year,
-  // day / 365 will be 4 instead of 3. Cut it back down to 3
-  // by subtracting n>>2.
+  /// Cut off years within a 4-year cycle.
+  /// The last year is a leap year, so on the last day of that year,
+  /// day / 365 will be 4 instead of 3. Cut it back down to 3
+  /// by subtracting n>>2.
   n = d.divn(365);
   n = n.sub(n.shrn(2));
   y = y.add(n);
@@ -318,24 +341,24 @@ var absDate = function(abs, full) {
 
   var day = yday.clone();
   if (isLeap(year.toNumber())) {
-    // Leap year
+    /// Leap year
     if (day.gtn(31+29-1)) {
-      // After leap day; pretend it wasn't there.
+      /// After leap day; pretend it wasn't there.
       day = day.subn(1);
     } else if (day.eqn(31+29-1)) {
       return [year, February, 29, yday.toNumber()];
     }
   }
-  // Estimate month on assumption that every month has 31 days.
-  // The estimate may be too low by at most one month, so adjust.
+  /// Estimate month on assumption that every month has 31 days.
+  /// The estimate may be too low by at most one month, so adjust.
   var month = new Month(day.divn(31).toNumber());
-  var end = daysBefore[month.month+1];
+  var end = _daysBefore[month.month+1];
   var begin;
   if (day.gten(end)) {
     month.month++;
     begin = end;
   } else {
-    begin = daysBefore[month.month];
+    begin = _daysBefore[month.month];
   }
   month.month++; // because January is 1
   day = day.subn(begin).addn(1);
@@ -351,8 +374,8 @@ class clockResult {
   };
 };
 
-// absClock is like clock but operates on an absolute time.
-// returns a clockResult {hour, min, sec}, all integers.
+/// absClock is like clock but operates on an absolute time.
+/// returns a clockResult {hour, min, sec}, all integers.
 var absClock = function(abs) {
   internal.isUint64(abs);
   var isec = abs.mod(constants.secondsPerDay.toUnsigned()).toSigned();
@@ -392,9 +415,13 @@ class weekResult {
   };
 };
 
-// appendInt appends the decimal form of x to b and returns the result.
-// If the decimal form (excluding sign) is shorter than width, the result is padded with leading 0's.
-// Duplicates functionality in strconv, but avoids dependency.
+/**
+ * appendInt appends the decimal form of x to b and returns the result.
+ * If the decimal form (excluding sign) is shorter than width, the result is padded with leading 0's.
+ * Duplicates functionality in strconv, but avoids dependency.
+ *
+ * @private
+ */
 var appendInt = function(buf, x, width) {
   internal.areIntegers([x, width]);
   if ((buf instanceof bytes.Slice) === false) {
@@ -406,7 +433,7 @@ var appendInt = function(buf, x, width) {
     u = Uint64.from(-x);
   }
 
-  // Assemble decimal in reverse order.
+  /// Assemble decimal in reverse order.
   var buf2 = new bytes.Slice(20);
   var i = 20;
   while (u.gtn(10)) {
@@ -418,7 +445,7 @@ var appendInt = function(buf, x, width) {
   i--;
   buf2.set(i, u.toNumber() + zero);
 
-  // Add 0-padding.
+  /// Add 0-padding.
   var w = buf2.length - i;
   for (; w < width; w++) {
   }
@@ -431,7 +458,7 @@ var appendInt = function(buf, x, width) {
   return buf.append(buf2.slice(i));
 };
 
-// used by isoWeek
+/// used by isoWeek
 const Mon = 0;
 const Tue = 1;
 const Wed = 2;
@@ -440,11 +467,16 @@ const Fri = 4;
 const Sat = 5;
 const Sun = 6;
 
-// Unix returns the local Time corresponding to the given Unix time,
-// sec seconds and nsec nanoseconds since January 1, 1970 UTC.
-// It is valid to pass nsec outside the range [0, 999999999].
-// Not all sec values have a corresponding time value. One such
-// value is 1<<63-1 (the largest int64 value).
+/**
+ * Unix returns the local Time corresponding to the given Unix time,
+ * sec seconds and nsec nanoseconds since January 1, 1970 UTC.
+ * It is valid to pass nsec outside the range [0, 999999999].
+ * Not all sec values have a corresponding time value. One such
+ * value is 1<<63-1 (the largest int64 value).
+ *
+ * @param {Int64} sec Integer number of seconds
+ * @param {Int64} nsec Integer number of nanoseconds.
+ */
 time.unix = function(sec, nsec) {
   internal.isInt64(sec);
   internal.isInt64(nsec);
@@ -464,7 +496,7 @@ var daysIn = function(m, year) {
   if (m.equal(February) && isLeap(year)) {
     return 29;
   }
-  return daysBefore[m] - daysBefore[m-1];
+  return _daysBefore[m] - _daysBefore[m-1];
 };
 
 time.Nanosecond = Nanosecond;
@@ -486,7 +518,9 @@ time.RFC1123Z = "Mon, 02 Jan 2006 15:04:05 -0700"; // RFC1123 with numeric zone
 time.RFC3339 = "2006-01-02T15:04:05Z07:00";
 time.RFC3339Nano = "2006-01-02T15:04:05.999999999Z07:00";
 time.Kitchen = "3:04PM";
-// Handy time stamps.
+/**
+ * Handy time stamps.
+ */
 time.Stamp = "Jan _2 15:04:05";
 time.StampMilli = "Jan _2 15:04:05.000";
 time.StampMicro = "Jan _2 15:04:05.000000";
@@ -520,7 +554,7 @@ const errLeadingInt = new Error("time: bad [0-9]*"); // never printed
 const atoiError = new Error("time: invalid number");
 const errBad = new Error("bad value for field");
 
-// leadingInt consumes the leading [0-9]* from s.
+/// leadingInt consumes the leading [0-9]* from s.
 var leadingInt = function(s) {
   internal.areStrings([s]);
   var i = 0;
@@ -531,21 +565,25 @@ var leadingInt = function(s) {
       break;
     }
     if (x.gt( (Int64.from(1).shln(63).subn(1)).divn(10) )) {
-      // overflow
+      /// overflow
       throw errLeadingInt;
     }
     x = x.muln(10).addn(c.charCodeAt(0)).subn('0'.charCodeAt(0));
     if (x.ltn(0)) {
-      // overflow
+      /// overflow
       throw errLeadingInt;
     }
   }
   return [x, s.slice(i)];
 };
 
-// parseGMT parses a GMT time zone. The input string is known to start "GMT".
-// The function checks whether that is followed by a sign and a number in the
-// range -14 through 12 excluding zero.
+/**
+ * parseGMT parses a GMT time zone. The input string is known to start "GMT".
+ * The function checks whether that is followed by a sign and a number in the
+ * range -14 through 12 excluding zero.
+ *
+ * @private
+ */
 var parseGMT = function(value) {
   internal.isString(value);
   value = value.slice(3);
@@ -637,9 +675,9 @@ var parseNanoseconds = function(value, nbytes) {
   if (ns < 0 || 1e9 <= ns) {
     return [0, "fractional second"];
   }
-  // We need nanoseconds, which means scaling by the number
-  // of missing digits in the format, maximum length 10. If it's
-  // longer than 10, we won't scale.
+  /// We need nanoseconds, which means scaling by the number
+  /// of missing digits in the format, maximum length 10. If it's
+  /// longer than 10, we won't scale.
   var scaleDigits = 10 - nbytes;
   for (var i = 0; i < scaleDigits; i++) {
     ns *= 10;
@@ -647,30 +685,34 @@ var parseNanoseconds = function(value, nbytes) {
   return [ns, ""];
 };
 
-// parseTimeZone parses a time zone string and returns its length. Time zones
-// are human-generated and unpredictable. We can't do precise error checking.
-// On the other hand, for a correct parse there must be a time zone at the
-// beginning of the string, so it's almost always true that there's one
-// there. We look at the beginning of the string for a run of upper-case letters.
-// If there are more than 5, it's an error.
-// If there are 4 or 5 and the last is a T, it's a time zone.
-// If there are 3, it's a time zone.
-// Otherwise, other than special cases, it's not a time zone.
-// GMT is special because it can have an hour offset.
+/**
+ * parseTimeZone parses a time zone string and returns its length. Time zones
+ * are human-generated and unpredictable. We can't do precise error checking.
+ * On the other hand, for a correct parse there must be a time zone at the
+ * beginning of the string, so it's almost always true that there's one
+ * there. We look at the beginning of the string for a run of upper-case letters.
+ * If there are more than 5, it's an error.
+ * If there are 4 or 5 and the last is a T, it's a time zone.
+ * If there are 3, it's a time zone.
+ * Otherwise, other than special cases, it's not a time zone.
+ * GMT is special because it can have an hour offset.
+ *
+ * @private
+ */
 var parseTimeZone = function(value) {
   internal.isString(value);
   if (value.length < 3) {
     throw new Error("too short");
   }
-  // Special case 1: ChST and MeST are the only zones with a lower-case letter.
+  /// Special case 1: ChST and MeST are the only zones with a lower-case letter.
   if (value.length >= 4 && (value.slice(0, 4) === "ChST" || value.slice(0, 4) === "MeST")) {
     return 4;
   }
-  // Special case 2: GMT may have an hour offset; treat it specially.
+  /// Special case 2: GMT may have an hour offset; treat it specially.
   if (value.slice(0, 3) === "GMT") {
     return parseGMT(value);
   }
-  // How many upper-case letters are there? Need at least three, at most five.
+  /// How many upper-case letters are there? Need at least three, at most five.
   var nUpper = 0;
   for (nUpper = 0; nUpper < 6; nUpper++) {
     if (nUpper >= value.length) {
@@ -688,7 +730,7 @@ var parseTimeZone = function(value) {
       return 5;
     }
   } else if (nUpper === 4) {
-    // Must end in T, except one special case.
+    /// Must end in T, except one special case.
     if (value[3] === 'T' || value.slice(0, 4) === "WITA") {
       return 4;
     }
@@ -698,11 +740,13 @@ var parseTimeZone = function(value) {
   throw new Error("not valid");
 };
 
-// ParseInLocation is like Parse but differs in two important ways.
-// First, in the absence of time zone information, Parse interprets a time as UTC;
-// ParseInLocation interprets the time as in the given location.
-// Second, when given a zone offset or abbreviation, Parse tries to match it
-// against the Local location; ParseInLocation uses the given location.
+/**
+ * ParseInLocation is like Parse but differs in two important ways.
+ * First, in the absence of time zone information, Parse interprets a time as UTC;
+ * ParseInLocation interprets the time as in the given location.
+ * Second, when given a zone offset or abbreviation, Parse tries to match it
+ * against the Local location; ParseInLocation uses the given location.
+ */
 time.parseInLocation = function(layout, value, loc) {
   internal.areStrings([layout, value]);
   if ((loc instanceof location.Location) === false) {
@@ -711,11 +755,15 @@ time.parseInLocation = function(layout, value, loc) {
   return _parse(layout, value, loc, loc);
 }
 
-// leadingFraction consumes the leading [0-9]* from s.
-// It is used only for fractions, so does not return an error on overflow,
-// it just stops accumulating precision.
-//
-// [int64, float64, string]
+/**
+ * leadingFraction consumes the leading [0-9]* from s.
+ * It is used only for fractions, so does not return an error on overflow,
+ * it just stops accumulating precision.
+ *
+ * [int64, float64, string]
+ *
+ * @private
+ */
 var leadingFraction = function(s) {
   internal.isString(s);
   var i = 0;
@@ -731,7 +779,9 @@ var leadingFraction = function(s) {
       continue;
     }
     if (x.gt(internal.Int64.from(1).shln(63).subn(1).divn(10))) {
-      // It's possible for overflow to give a positive number, so take care.
+      /**
+       * It's possible for overflow to give a positive number, so take care.
+       */
       overflow = true;
       continue;
     }
@@ -757,19 +807,21 @@ var unitMap = {
   "h":  internal.Int64.from(time.Hour.d),
 };
 
-// ParseDuration parses a duration string.
-// A duration string is a possibly signed sequence of
-// decimal numbers, each with optional fraction and a unit suffix,
-// such as "300ms", "-1.5h" or "2h45m".
-// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+/**
+ * ParseDuration parses a duration string.
+ * A duration string is a possibly signed sequence of
+ * decimal numbers, each with optional fraction and a unit suffix,
+ * such as "300ms", "-1.5h" or "2h45m".
+ * Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+ */
 time.parseDuration = function(s) {
   internal.isString(s);
-  // [-+]?([0-9]*(\.[0-9]*)?[a-z]+)+
+  /// [-+]?([0-9]*(\.[0-9]*)?[a-z]+)+
   var orig = s;
   var d = internal.Int64.from(0);
   var neg = false;
 
-  // Consume [-+]?
+  /// Consume [-+]?
   if (s !== "") {
     var c = s[0];
     if (c === '-' || c === '+') {
@@ -777,7 +829,7 @@ time.parseDuration = function(s) {
       s = s.slice(1);
     }
   }
-  // Special case: if all that is left is "0", this is zero.
+  /// Special case: if all that is left is "0", this is zero.
   if (s === "0") {
     return new time.Duration(0);
   }
@@ -789,11 +841,11 @@ time.parseDuration = function(s) {
     var f = internal.Int64.from(0);
     var scale = 1;
 
-    // The next character must be [0-9.]
+    /// The next character must be [0-9.]
     if ((s[0] === '.' || '0' <= s[0] && s[0] <= '9') === false) {
       throw new Error("time: invalid duration " + orig);
     }
-    // Consume [0-9]*
+    /// Consume [0-9]*
     var pl = s.length;
     try {
       var results = leadingInt(s);
@@ -803,7 +855,7 @@ time.parseDuration = function(s) {
     }
     var pre = pl !== s.length; // whether we consumed anything before a period
 
-    // Consume (\.[0-9]*)?
+    /// Consume (\.[0-9]*)?
     var post = false;
     if (s !== "" && s[0] === '.') {
       s = s.slice(1);
@@ -814,11 +866,11 @@ time.parseDuration = function(s) {
       post = pl !== s.length;
     }
     if (pre === false && post === false) {
-      // no digits (e.g. ".s" or "-.s")
+      /// no digits (e.g. ".s" or "-.s")
       throw new Error("time: invalid duration " + orig);
     }
 
-    // Consume unit.
+    /// Consume unit.
     var i = 0;
     for (; i < s.length; i++) {
       var c = s[i];
@@ -836,22 +888,22 @@ time.parseDuration = function(s) {
       throw new Error("time: unknown unit " + u + " in duration " + orig);
     }
     if (v.gt(internal.Int64.from(1).shln(63).subn(1).div(unit))) {
-      // overflow
+      /// overflow
       throw new Error("time: invalid duration " + orig);
     }
     v = v.mul(unit);
     if (f.gtn(0)) {
-      // float64 is needed to be nanosecond accurate for fractions of hours.
-      // v >= 0 && (f*unit/scale) <= 3.6e+12 (ns/h, h is the largest unit)
+      /// float64 is needed to be nanosecond accurate for fractions of hours.
+      /// v >= 0 && (f*unit/scale) <= 3.6e+12 (ns/h, h is the largest unit)
       v = v.add(internal.Int64.from(f.toDouble() * unit.toDouble() / scale));
       if (v.ltn(0)) {
-        // overflow
+        /// overflow
         throw new Error("time: invalid duration " + orig);
       }
     }
     d = d.add(v);
     if (d.ltn(0)) {
-      // overflow
+      /// overflow
       throw new Error("time: invalid duration " + orig);
     }
   }
@@ -862,14 +914,16 @@ time.parseDuration = function(s) {
   return new time.Duration(d);
 };
 
-// match reports whether s1 and s2 match ignoring case.
-// It is assumed s1 and s2 are the same length.
+/**
+ * match reports whether s1 and s2 match ignoring case.
+ * It is assumed s1 and s2 are the same length.
+ */
 var match = function(s1, s2) {
   for (var i = 0; i < s1.length; i++) {
     var c1 = s1[i].charCodeAt(0);
     var c2 = s2[i].charCodeAt(0);
     if (c1 !== c2) {
-      // Switch to lower-case; 'a'-'A' is known to be a single bit.
+      /// Switch to lower-case; 'a'-'A' is known to be a single bit.
       c1 |= a - A;
       c2 |= a - A;
       if (c1 !== c2 || c1 < a || c1 > z) {
@@ -935,9 +989,13 @@ var longMonthNames = [
 var a = 'a'.charCodeAt(0);
 var A = 'A'.charCodeAt(0);
 var z = 'z'.charCodeAt(0);
-// norm returns nhi, nlo such that
-//	hi * base + lo == nhi * base + nlo
-//	0 <= nlo < base
+/**
+ * norm returns nhi, nlo such that
+ * hi * base + lo == nhi * base + nlo
+ * 0 <= nlo < base
+ *
+ * @private
+ */
 var norm = function(hi, lo, base) {
   internal.areIntegers([hi, lo, base]);
   if (lo < 0) {
@@ -953,10 +1011,14 @@ var norm = function(hi, lo, base) {
   return [hi, lo];
 };
 
-// daysBefore[m] counts the number of days in a non-leap year
-// before month m begins. There is an entry for m=12, counting
-// the number of days before January of next year (365).
-var daysBefore = [
+/**
+ * _daysBefore[m] counts the number of days in a non-leap year
+ * before month m begins. There is an entry for m=12, counting
+ * the number of days before January of next year (365).
+ *
+ * @private
+ */
+var _daysBefore = [
   0,
   31,
   31 + 28,
@@ -1002,6 +1064,11 @@ class Month {
     this.month = i;
   };
 
+  /**
+   * Equal returns true if the current month and b are equal.
+   *
+   * @param {integer} b Month Month object.
+   */
   equal(b) {
     if (b instanceof Month === false) {
       throw new Error("not comparing to a month object: " + JSON.stringify(b));
@@ -1009,6 +1076,9 @@ class Month {
     return this.month === b.month;
   };
 
+  /**
+   * toString returns a string for the given Month ("February")
+   */
   toString() {
     var m = this.month;
     if (January.month <= m && m <= December.month) {
@@ -1069,10 +1139,14 @@ const Thursday = new Weekday(4);
 const Friday = new Weekday(5);
 const Saturday = new Weekday(6);
 
-// absWeekday is like Weekday but operates on an absolute time.
+/**
+ * absWeekday is like Weekday but operates on an absolute time.
+ *
+ * @private
+ */
 var absWeekday = function(abs) {
   internal.isUint64(abs);
-  // January 1 of the absolute year, like January 1 of 2001, was a Monday.
+  /// January 1 of the absolute year, like January 1 of 2001, was a Monday.
   var s1 = Uint64.from(Monday.day).mul(constants.secondsPerDay.toUnsigned());
   var s2 = s1.add(abs).mod(constants.secondsPerWeek.toUnsigned());
   var s3 = s2.toSigned().div(constants.secondsPerDay);
@@ -1086,13 +1160,13 @@ var isLeap = function(year) {
 
 class Time {
   constructor(wall, ext, loc) {
-    // uint64
+    /// uint64
     if (typeof wall === 'undefined' || wall === null) {
       wall = internal.Uint64.from(0);
     }
     internal.isUint64(wall);
     this.wall = wall;
-    // int64
+    /// int64
     if (typeof ext === 'undefined' || ext === null) {
       ext = Int64.from(0);
     }
@@ -1102,16 +1176,21 @@ class Time {
     if (typeof loc === 'undefined') {
       throw new Error("must define loc or set it to null"); // TODO
     }
-    // not specified yet by anything
+    /// not specified yet by anything
     this.loc = loc;
   };
 
-  // clone returns a new Time object with all fields initialized.
+  /**
+   * clone returns a new Time object with all fields initialized.
+   * @private
+   */
   _clone() {
     return new Time(this.wall, this.ext, this.loc);
   }
 
-  // Add returns the time t+d.
+  /**
+   * Add returns the time t+d.
+   */
   add(d) {
     var t = this._clone();
     if ((d instanceof Duration) === false) {
@@ -1131,7 +1210,7 @@ class Time {
     if (t.wall.and(constants.hasMonotonic).eqn(0) === false) {
       var te = t.ext.add(d.d); // int64
       if (d.ltn(0) && te.gt(t.ext) || d.gtn(0) && te.lt(t.ext)) {
-        // Monotonic clock reading now out of range; degrade to wall-only.
+        /// Monotonic clock reading now out of range; degrade to wall-only.
         t._stripMono();
       } else {
         t.ext = te;
@@ -1140,10 +1219,12 @@ class Time {
     return t;
   };
 
-  // Sub returns the duration t-u. If the result exceeds the maximum (or minimum)
-  // value that can be stored in a Duration, the maximum (or minimum) duration
-  // will be returned.
-  // To compute t-d for a duration d, use t.Add(-d).
+  /**
+   * Sub returns the duration t-u. If the result exceeds the maximum (or minimum)
+   * value that can be stored in a Duration, the maximum (or minimum) duration
+   * will be returned.
+   * To compute t-d for a duration d, use t.Add(-d).
+   */
   sub(u) {
     var t = this._clone();
     if (t.wall.and(u.wall).and(constants.hasMonotonic).eqn(0) === false) {
@@ -1159,7 +1240,7 @@ class Time {
       return d;
     }
     var d = new Duration(t._sec().sub(u._sec())).mul(Second).add(new Duration(t._nsec().sub(u._nsec())));
-    // Check for overflow or underflow.
+    /// Check for overflow or underflow.
     if (u.add(d).equal(t)) {
       return d;
     }
@@ -1169,14 +1250,16 @@ class Time {
     return maxDuration; // t - u is positive out of range
   }
 
-  // AddDate returns the time corresponding to adding the
-  // given number of years, months, and days to t.
-  // For example, AddDate(-1, 2, 3) applied to January 1, 2011
-  // returns March 4, 2010.
-  //
-  // AddDate normalizes its result in the same way that Date does,
-  // so, for example, adding one month to October 31 yields
-  // December 1, the normalized form for November 31.
+  /**
+   * AddDate returns the time corresponding to adding the
+   * given number of years, months, and days to t.
+   * For example, AddDate(-1, 2, 3) applied to January 1, 2011
+   * returns March 4, 2010.
+   *
+   * AddDate normalizes its result in the same way that Date does,
+   * so, for example, adding one month to October 31 yields
+   * December 1, the normalized form for November 31.
+   */
   addDate(years, months, days) {
     internal.areIntegers([years, months, days]);
     var dateResults = this.date();
@@ -1187,7 +1270,9 @@ class Time {
       this._nsec().toNumber(), this.location());
   };
 
-  // After reports whether the time instant t is after u.
+  /**
+   * After reports whether the time instant t is after u.
+   */
   after(u) {
     if ((u instanceof Time) === false) {
       throw new Error("Must compare to another Time object");
@@ -1200,7 +1285,9 @@ class Time {
     return ts.gt(us) || ts.eq(us) && t._nsec().gt(u.nsec());
   };
 
-  // Before reports whether the time instant t is before u.
+  /**
+   * Before reports whether the time instant t is before u.
+   */
   before(u) {
     if ((u instanceof Time) === false) {
       throw new Error("Must compare to another Time object");
@@ -1213,11 +1300,13 @@ class Time {
     return tsec.lt(usec) || tsec.eq(usec) && t._nsec().lt(u._nsec());
   };
 
-  // Equal reports whether t and u represent the same time instant.
-  // Two times can be equal even if they are in different locations.
-  // For example, 6:00 +0200 CEST and 4:00 UTC are Equal.
-  // See the documentation on the Time type for the pitfalls of using == with
-  // Time values; most code should use Equal instead.
+  /**
+   * Equal reports whether t and u represent the same time instant.
+   * Two times can be equal even if they are in different locations.
+   * For example, 6:00 +0200 CEST and 4:00 UTC are Equal.
+   * See the documentation on the Time type for the pitfalls of using == with
+   * Time values; most code should use Equal instead.
+   */
   equal(u) {
     if ((u instanceof Time) === false) {
       throw new Error("u not a Time instance");
@@ -1228,22 +1317,24 @@ class Time {
     return this._sec().eq(u._sec()) && this._nsec().eq(u._nsec());
   };
 
-  // Format returns a textual representation of the time value formatted
-  // according to layout, which defines the format by showing how the reference
-  // time, defined to be
-  //	Mon Jan 2 15:04:05 -0700 MST 2006
-  // would be displayed if it were the value; it serves as an example of the
-  // desired output. The same display rules will then be applied to the time
-  // value.
-  //
-  // A fractional second is represented by adding a period and zeros
-  // to the end of the seconds section of layout string, as in "15:04:05.000"
-  // to format a time stamp with millisecond precision.
-  //
-  // Predefined layouts ANSIC, UnixDate, RFC3339 and others describe standard
-  // and convenient representations of the reference time. For more information
-  // about the formats and the definition of the reference time, see the
-  // documentation for ANSIC and the other constants defined by this package.
+  /**
+   * Format returns a textual representation of the time value formatted
+   * according to layout, which defines the format by showing how the reference
+   * time, defined to be
+   *	Mon Jan 2 15:04:05 -0700 MST 2006
+   * would be displayed if it were the value; it serves as an example of the
+   * desired output. The same display rules will then be applied to the time
+   * value.
+   *
+   * A fractional second is represented by adding a period and zeros
+   * to the end of the seconds section of layout string, as in "15:04:05.000"
+   * to format a time stamp with millisecond precision.
+   *
+   * Predefined layouts ANSIC, UnixDate, RFC3339 and others describe standard
+   * and convenient representations of the reference time. For more information
+   * about the formats and the definition of the reference time, see the
+   * documentation for ANSIC and the other constants defined by this package.
+   */
   format(layout) {
     internal.isString(layout);
     const bufSize = 64;
@@ -1252,10 +1343,12 @@ class Time {
     return b.toString();
   }
 
-  // AppendFormat is like Format but appends the textual
-  // representation to buf and returns the extended buffer.
-  //
-  // Returns a bytes.Slice instance.
+  /**
+   * AppendFormat is like Format but appends the textual
+   * representation to buf and returns the extended buffer.
+   *
+   * Returns a bytes.Slice instance.
+   */
   appendFormat(buf, layout) {
     internal.isString(layout);
     if ((buf instanceof bytes.Slice) === false) {
@@ -1286,13 +1379,13 @@ class Time {
       }
       layout = suffix;
 
-      // Compute year, month, day if needed.
+      /// Compute year, month, day if needed.
       if (year < 0 && ((std & stdNeedDate) !== 0)) {
         var results = absDate(abs, true);
         year = results[0].toNumber(), month = results[1], day = results[2];
       }
 
-      // Compute hour, minute, second if needed.
+      /// Compute hour, minute, second if needed.
       if (hour < 0 && ((std & stdNeedClock) !== 0)) {
         var results = absClock(abs);
         hour = results.hour, min = results.min, sec = results.sec;
@@ -1331,14 +1424,18 @@ class Time {
       } else if (mask === stdHour) {
         buf = appendInt(buf, hour, 2);
       } else if (mask === stdHour12) {
-        // Noon is 12PM, midnight is 12AM.
+        /**
+         * Noon is 12PM, midnight is 12AM.
+         */
         var hr = hour % 12;
         if (hr === 0) {
           hr = 12;
         }
         buf = appendInt(buf, hr, 0);
       } else if (mask === stdZeroHour12) {
-        // Noon is 12PM, midnight is 12AM.
+        /**
+         * Noon is 12PM, midnight is 12AM.
+         */
         var hr = hour % 12;
         if (hr === 0) {
           hr = 12;
@@ -1369,8 +1466,8 @@ class Time {
         mask === stdISO8601ColonSecondsTZ || mask === stdNumTZ ||
         mask === stdNumColonTZ || mask === stdNumSecondsTz ||
         mask === stdNumShortTZ || mask === stdNumColonSecondsTZ) {
-        // Ugly special case. We cheat and take the "Z" variants
-        // to mean "the time zone as formatted for ISO 8601".
+        /// Ugly special case. We cheat and take the "Z" variants
+        /// to mean "the time zone as formatted for ISO 8601".
         if (offset === 0 && (std === stdISO8601TZ ||
           std === stdISO8601ColonTZ || std === stdISO8601SecondsTZ ||
           std === stdISO8601ShortTZ || std === stdISO8601ColonSecondsTZ)
@@ -1395,7 +1492,7 @@ class Time {
             buf = appendInt(buf, zone%60, 2);
           }
 
-          // append seconds if appropriate
+          /// append seconds if appropriate
           if (std === stdISO8601SecondsTZ || std === stdNumSecondsTz || std === stdNumColonSecondsTZ || std === stdISO8601ColonSecondsTZ) {
             if (std === stdNumColonSecondsTZ || std === stdISO8601ColonSecondsTZ) {
               buf = buf.append([ord(':')]);
@@ -1407,8 +1504,8 @@ class Time {
         if (name !== "") {
           buf = buf.append(name);
         } else { // original code had a break here, we can't use that.
-          // No time zone known for this time, but we must print one.
-          // Use the -0700 format.
+          /// No time zone known for this time, but we must print one.
+          /// Use the -0700 format.
           var zone = offset / 60; // convert to minutes
           if (zone < 0) {
             buf = buf.append([ord('-')]);
@@ -1426,22 +1523,28 @@ class Time {
     return buf;
   };
 
-  // Clock() {hour int, min int, sec int}
-  //
-  // Clock returns the {hour, min, and sec} within the day specified by t.
+  /**
+   * Clock() {hour int, min int, sec int}
+   *
+   * Clock returns the {hour, min, and sec} within the day specified by t.
+   */
   clock() {
     return absClock(this._abs());
   }
 
-  // Date() {year int, month Month, day int}
-  //
-  // Date returns the {year, month, and day} in which t occurs, as integers.
+  /**
+   * Date() {year int, month Month, day int}
+   *
+   * Date returns the {year, month, and day} in which t occurs, as integers.
+   */
   date() {
     var results = this._date(true);
     return new dateResult(results[0].toNumber(), results[1], results[2]);
   };
 
-  // Location returns the time zone information associated with t.
+  /**
+   * Location returns the time zone information associated with t.
+   */
   location() {
     var l = this.loc;
     if (l === null) {
@@ -1450,26 +1553,34 @@ class Time {
     return l;
   }
 
-  // Nanosecond returns the nanosecond offset within the second specified by t,
-  // in the range [0, 999999999].
+  /**
+   * Nanosecond returns the nanosecond offset within the second specified by t,
+   * in the range [0, 999999999].
+   */
   nanosecond() {
     return this._nsec().toNumber();
   }
 
-  // Second returns the second offset within the minute specified by t, in the range [0, 59].
+  /**
+   * Second returns the second offset within the minute specified by t, in the range [0, 59].
+   */
   second() {
     var abs = this._abs();
     return abs.mod(constants.secondsPerMinute.toUnsigned()).toNumber();
   };
 
-  // Minute returns the minute offset within the hour specified by t, in the range [0, 59].
+  /**
+   * Minute returns the minute offset within the hour specified by t, in the range [0, 59].
+   */
   minute() {
     var abs = this._abs();
     var mod = abs.mod(constants.secondsPerHour.toUnsigned()).toSigned();
     return mod.div(constants.secondsPerMinute).toNumber();
   };
 
-  // Hour returns the hour within the day specified by t, in the range [0, 23].
+  /**
+   * Hour returns the hour within the day specified by t, in the range [0, 23].
+   */
   hour() {
     var abs = this._abs();
     return abs.mod(constants.secondsPerDay.toUnsigned()).div(constants.secondsPerHour.toUnsigned()).toNumber();
@@ -1480,52 +1591,66 @@ class Time {
     return results[2];
   };
 
-  // Weekday returns the day of the week specified by t.
+  /**
+   * Weekday returns the day of the week specified by t.
+   */
   weekday() {
     return absWeekday(this._abs());
   };
 
-  // ISOWeek returns the ISO 8601 year and week number in which t occurs.
-  // Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
-  // week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1
-  // of year n+1.
+  /**
+   * ISOWeek returns the ISO 8601 year and week number in which t occurs.
+   * Week ranges from 1 to 53. Jan 01 to Jan 03 of year n might belong to
+   * week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1
+   * of year n+1.
+   */
   isoWeek() {
     var results = this._date(true);
     var year = results[0].toNumber(), month = results[1], day = results[2], yday = results[3];
     var wday = (this.weekday().day+6) % 7; // weekday but Monday = 0.
 
-    // Calculate week as number of Mondays in year up to
-    // and including today, plus 1 because the first week is week 0.
-    // Putting the + 1 inside the numerator as a + 7 keeps the
-    // numerator from being negative, which would cause it to
-    // round incorrectly.
+    /**
+     * Calculate week as number of Mondays in year up to
+     * and including today, plus 1 because the first week is week 0.
+     * Putting the + 1 inside the numerator as a + 7 keeps the
+     * numerator from being negative, which would cause it to
+     * round incorrectly.
+     */
     var week = Math.floor((yday - wday + 7) / 7);
 
-    // The week number is now correct under the assumption
-    // that the first Monday of the year is in week 1.
-    // If Jan 1 is a Tuesday, Wednesday, or Thursday, the first Monday
-    // is actually in week 2.
+    /**
+     * The week number is now correct under the assumption
+     * that the first Monday of the year is in week 1.
+     * If Jan 1 is a Tuesday, Wednesday, or Thursday, the first Monday
+     * is actually in week 2.
+     */
     var jan1wday = (wday - yday + 7*53) % 7;
     if (Tue <= jan1wday && jan1wday <= Thu) {
       week++;
     }
 
-    // If the week number is still 0, we're in early January but in
-    // the last week of last year.
+    /**
+     * If the week number is still 0, we're in early January but in
+     * the last week of last year.
+     */
     if (week === 0) {
       year--;
       week = 52;
-      // A year has 53 weeks when Jan 1 or Dec 31 is a Thursday,
-      // meaning Jan 1 of the next year is a Friday
-      // or it was a leap year and Jan 1 of the next year is a Saturday.
+      /**
+       * A year has 53 weeks when Jan 1 or Dec 31 is a Thursday,
+       * meaning Jan 1 of the next year is a Friday
+       * or it was a leap year and Jan 1 of the next year is a Saturday.
+       */
       if (jan1wday === Fri || (jan1wday === Sat && isLeap(year))) {
         week++;
       }
     }
 
-    // December 29 to 31 are in week 1 of next year if
-    // they are after the last Thursday of the year and
-    // December 31 is a Monday, Tuesday, or Wednesday.
+    /**
+     * December 29 to 31 are in week 1 of next year if
+     * they are after the last Thursday of the year and
+     * December 31 is a Monday, Tuesday, or Wednesday.
+     */
     if (month.equal(December) && day >= 29 && wday < Thu) {
       var dec31wday = (wday + 31 - day) % 7;
       if (Mon <= dec31wday && dec31wday <= Wed) {
@@ -1541,8 +1666,10 @@ class Time {
     return results[1];
   };
 
-  // YearDay returns the day of the year specified by t, in the range [1,365]
-  // for non-leap years, and [1,366] in leap years.
+  /**
+   * YearDay returns the day of the year specified by t, in the range [1,365]
+   * for non-leap years, and [1,366] in leap years.
+   */
   yearDay() {
     var results = this._date(false);
     return results[3] + 1;
@@ -1553,8 +1680,10 @@ class Time {
     return results[0].toNumber();
   };
 
-  // IsZero reports whether t represents the zero time instant,
-  // January 1, year 1, 00:00:00 UTC.
+  /**
+   * IsZero reports whether t represents the zero time instant,
+   * January 1, year 1, 00:00:00 UTC.
+   */
   isZero() {
     return this._sec().eqn(0) && this._nsec().eqn(0);
   };
@@ -1564,19 +1693,23 @@ class Time {
     return this;
   };
 
-  // Unix returns t as a Unix time, the number of seconds elapsed since January
-  // 1, 1970 UTC.
+  /**
+   * Unix returns t as a Unix time, the number of seconds elapsed since January
+   * 1, 1970 UTC.
+   */
   unix() {
     return this._unixSec();
   };
 
-  // MarshalJSON implements the json.Marshaler interface.
-  // The time is a quoted string in RFC 3339 format, with sub-second precision added if present.
+  /**
+   * MarshalJSON implements the json.Marshaler interface.
+   * The time is a quoted string in RFC 3339 format, with sub-second precision added if present.
+   */
   toJSON() {
     var y = this.year();
     if (y < 0 || y >= 10000) {
-      // RFC 3339 is clear that years are 4 digits exactly.
-      // See golang.org/issue/4556#c15 for more discussion.
+      /// RFC 3339 is clear that years are 4 digits exactly.
+      /// See golang.org/issue/4556#c15 for more discussion.
       throw new Error("Time.MarshalJSON: year outside of range [0,9999]");
     }
 
@@ -1587,12 +1720,18 @@ class Time {
     return b;
   };
 
-  // nsec returns the time's nanoseconds.
+  /**
+   * nsec returns the time's nanoseconds.
+   * @private
+   */
   _nsec() {
     return this.wall.and(constants.nsecMask);
   };
 
-  // sec returns the time's seconds as a Uint64 since Jan 1 year 1.
+  /**
+   * sec returns the time's seconds as a Uint64 since Jan 1 year 1.
+   * @private
+   */
   _sec() {
     if (this.wall.and(constants.hasMonotonic).eqn(0) === false) {
       return constants.wallToInternal.add((this.wall.shln(1).shr(constants.nsecShift.addn(1))).toSigned());
@@ -1600,7 +1739,10 @@ class Time {
     return this.ext;
   };
 
-  // addSec adds d seconds to the time.
+  /**
+   * addSec adds d seconds to the time.
+   * @private
+   */
   _addSec(d) {
     internal.isInt64(d);
     if (this.wall.and(constants.hasMonotonic).eqn(0) === false) {
@@ -1613,23 +1755,29 @@ class Time {
         this.wall = this.wall.and(constants.nsecMask).or(dsec.toUnsigned().shl(constants.nsecShift)).or(constants.hasMonotonic);
         return;
       }
-      // Wall second now out of range for packed field.
-      // Move to ext.
+      /// Wall second now out of range for packed field.
+      /// Move to ext.
       this._stripMono();
     }
 
-    // TODO: Check for overflow.
+    /// TODO: Check for overflow.
     this.ext = this.ext.add(d);
   };
 
-  // date computes the year, day of year, and when full=true,
-  // the month and day in which t occurs.
+  /**
+   * date computes the year, day of year, and when full=true,
+   * the month and day in which t occurs.
+   * @private
+   */
   _date(full) {
     internal.isBool(full);
     return absDate(this._abs(), full);
   }
 
-  // setLoc sets the location associated with the time.
+  /**
+   * setLoc sets the location associated with the time.
+   * @private
+   */
   _setLoc(loc) {
     if (loc === location.UTC) {
       loc = null;
@@ -1638,7 +1786,10 @@ class Time {
     this.loc = loc;
   };
 
-  // stripMono strips the monotonic clock reading in t.
+  /**
+   * stripMono strips the monotonic clock reading in t.
+   * @private
+   */
   _stripMono() {
     if (this.wall.and(constants.hasMonotonic).eqn(0) === false) {
       this.ext = this._sec();
@@ -1646,11 +1797,15 @@ class Time {
     }
   };
 
-  // abs returns the time t as an absolute time, adjusted by the zone offset.
-  // It is called when computing a presentation property like Month or Hour.
+  /**
+   * abs returns the time t as an absolute time, adjusted by the zone offset.
+   * It is called when computing a presentation property like Month or Hour.
+   *
+   * @private
+   */
   _abs() {
     var l = this.loc;
-    // Avoid function calls when possible.
+    /// Avoid function calls when possible.
     if (l === null) {
       l = location.UTC;
     } else if (l === location.Local) {
@@ -1669,9 +1824,13 @@ class Time {
     return sec.add(constants.unixToInternal.add(constants.internalToAbsolute)).toUnsigned();
   };
 
-  // locabs is a combination of the Zone and abs methods,
-  // extracting both return values from a single zone lookup.
-  // (name string, offset int, abs uint64)
+  /**
+   * locabs is a combination of the Zone and abs methods,
+   * extracting both return values from a single zone lookup.
+   * (name string, offset int, abs uint64)
+   *
+   * @private
+   */
   _locabs() {
     var l = this.loc;
     if (l === location.Local) {
@@ -1681,7 +1840,9 @@ class Time {
     }
     var name = ""; // string
     var offset = 0;
-    // Avoid function call if we hit the local time cache.
+    /**
+     * Avoid function call if we hit the local time cache.
+     */
     var sec = this._unixSec();
     if (l !== location.UTC) {
       if (l.cacheZone !== null && l.cacheStart.lte(sec) && sec.lte(l.cacheEnd)) {
@@ -1701,16 +1862,17 @@ class Time {
     return [name, offset, abs.toUnsigned()];
   }
 
-
-  // returns a uint64
+  /// returns a uint64
   _unixSec() {
     return this._sec().add(constants.internalToUnix);
   }
 
-  // Zone() {name string, offset int}
-  //
-  // Zone computes the time zone in effect at time t, returning the abbreviated
-  // name of the zone (such as "CET") and its offset in seconds east of UTC.
+  /**
+   * Zone() {name string, offset int}
+   *
+   * Zone computes the time zone in effect at time t, returning the abbreviated
+   * name of the zone (such as "CET") and its offset in seconds east of UTC.
+   */
   zone() {
     var loc = this.loc;
     if (loc === null) {
@@ -1721,7 +1883,10 @@ class Time {
   }
 };
 
-// TODO: nsec is supposed to be an int32.
+/**
+ * TODO: nsec is supposed to be an int32.
+ * @private
+ */
 var unixTime = function(sec, nsec) {
   internal.isInt64(sec);
   internal.isInt64(nsec);
@@ -1743,23 +1908,25 @@ var _now = function() {
   return new Time(constants.hasMonotonic.or(seconds.toUnsigned().shln(constants.nsecShift)).or(nsec), mono, location.Local);
 };
 
-// Date returns the Time corresponding to
-//	yyyy-mm-dd hh:mm:ss + nsec nanoseconds
-// in the appropriate zone for that time in the given location.
-//
-// The month, day, hour, min, sec, and nsec values may be outside
-// their usual ranges and will be normalized during the conversion.
-// For example, October 32 converts to November 1.
-//
-// A daylight savings time transition skips or repeats times.
-// For example, in the United States, March 13, 2011 2:15am never occurred,
-// while November 6, 2011 1:15am occurred twice. In such cases, the
-// choice of time zone, and therefore the time, is not well-defined.
-// Date returns a time that is correct in one of the two zones involved
-// in the transition, but it does not guarantee which.
-//
-// Date throws an error if loc is nil.
-// year int, month Month, day, hour, min, sec, nsec int, loc *Location
+/**
+ * Date returns the Time corresponding to
+ *	yyyy-mm-dd hh:mm:ss + nsec nanoseconds
+ * in the appropriate zone for that time in the given location.
+ *
+ * The month, day, hour, min, sec, and nsec values may be outside
+ * their usual ranges and will be normalized during the conversion.
+ * For example, October 32 converts to November 1.
+ *
+ * A daylight savings time transition skips or repeats times.
+ * For example, in the United States, March 13, 2011 2:15am never occurred,
+ * while November 6, 2011 1:15am occurred twice. In such cases, the
+ * choice of time zone, and therefore the time, is not well-defined.
+ * Date returns a time that is correct in one of the two zones involved
+ * in the transition, but it does not guarantee which.
+ *
+ * Date throws an error if loc is nil.
+ * year int, month Month, day, hour, min, sec, nsec int, loc *Location
+ */
 var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   internal.areIntegers([year, day, hour, min, sec, nsec]);
   if ((loc instanceof location.Location) === false) {
@@ -1768,13 +1935,13 @@ var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   if ((month instanceof Month) === false) {
     throw new Error("time: not a month");
   }
-  // Normalize month, overflowing into year.
+  /// Normalize month, overflowing into year.
   var m = month.month - 1;
   var results = norm(year, m, 12);
   year = results[0], m = results[1];
   month = new Month(m+1);
 
-  // Normalize nsec, sec, min, hour, overflowing into day.
+  /// Normalize nsec, sec, min, hour, overflowing into day.
   var results = norm(sec, nsec, 1e9);
   sec = results[0], nsec = results[1];
 
@@ -1788,45 +1955,45 @@ var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   day = results[0], hour = results[1];
 
   var y = Int64.from(year).sub(constants.absoluteZeroYear).toUnsigned();
-  // Compute days since the absolute epoch.
+  /// Compute days since the absolute epoch.
 
-  // Add in days from 400-year cycles.
+  /// Add in days from 400-year cycles.
   var n = y.divn(400);
   y = y.sub(n.muln(400));
   var d = n.mul(constants.daysPer400Years);
 
-  // Add in 100-year cycles.
+  /// Add in 100-year cycles.
   n = y.divn(100);
   y = y.sub(n.muln(100));
   d = d.add(n.mul(constants.daysPer100Years));
 
-  // Add in 4-year cycles.
+  /// Add in 4-year cycles.
   n = y.divn(4);
   y = y.sub(n.muln(4));
   d = d.add(n.mul(constants.daysPer4Years));
 
-  // Add in non-leap years.
+  /// Add in non-leap years.
   n = y.clone();
   d = d.add(n.muln(365));
 
-  // Add in days before this month.
-  d = d.add(Uint64.from(daysBefore[month.month-1]));
+  /// Add in days before this month.
+  d = d.add(Uint64.from(_daysBefore[month.month-1]));
   if (isLeap(year) && month.month >= March.month) {
     d = d.addn(1); // February 29
   }
 
-  // Add in days before today.
+  /// Add in days before today.
   d = d.addn(day - 1);
 
-  // Add in time elapsed today.
+  /// Add in time elapsed today.
   var abs = d.mul(constants.secondsPerDay);
   abs = abs.add(constants.secondsPerHour.muln(hour).add(constants.secondsPerMinute.muln(min)).addn(sec));
 
   var unix = abs.toSigned().add(constants.absoluteToInternal.add(constants.internalToUnix));
-  // Look for zone offset for t, so we can adjust to UTC.
-  // The lookup function expects UTC, so we pass t in the
-  // hope that it will not be too close to a zone transition,
-  // and then adjust if it is.
+  /// Look for zone offset for t, so we can adjust to UTC.
+  /// The lookup function expects UTC, so we pass t in the
+  /// hope that it will not be too close to a zone transition,
+  /// and then adjust if it is.
   var results = loc._lookup(unix);
   var offset = results.offset, start = results.start, end = results.end;
   if (offset !== 0) {
@@ -1843,7 +2010,7 @@ var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   return t;
 };
 
-// tab []string, val string
+/// tab []string, val string
 var lookup = function(tab, val) {
   for (var i = 0; i < tab.length; i++) {
     var v = tab[i];
@@ -1862,9 +2029,13 @@ var cutspace = function(s) {
   return s;
 };
 
-// getnum parses s[0:1] or s[0:2] (fixed forces the latter)
-// as a decimal integer and returns the integer and the
-// remainder of the string.
+/**
+ * getnum parses s[0:1] or s[0:2] (fixed forces the latter)
+ * as a decimal integer and returns the integer and the
+ * remainder of the string.
+ *
+ * @private
+ */
 var getnum = function(s, fixed) {
   internal.isBool(fixed);
   if (isDigit(s, 0) === false) {
@@ -1881,8 +2052,12 @@ var getnum = function(s, fixed) {
   return [diff*10 + diff1, s.slice(2)];
 };
 
-// skip removes the given prefix from value,
-// treating runs of space characters as equivalent.
+/**
+ * skip removes the given prefix from value,
+ * treating runs of space characters as equivalent.
+ *
+ * @private
+ */
 var skip = function(value, prefix) {
   internal.areStrings([value, prefix]);
   while (prefix.length > 0) {
@@ -1902,8 +2077,6 @@ var skip = function(value, prefix) {
   }
   return value;
 };
-
-// time/format.go
 
 const stdNeedDate = 1 << 8;
 const stdLongMonth = 1 + stdNeedDate;    // "January"
@@ -1948,11 +2121,19 @@ const stdFracSecond9 = 33;                        // ".9", ".99", ..., trailing 
 const stdArgShift  = 16;                 // extra argument in high bits, above low stdArgShift
 const stdMask      = (1<<stdArgShift) - 1; // mask out argument
 
-// std0x records the std values for "01", "02", ..., "06".
+/**
+ * std0x records the std values for "01", "02", ..., "06".
+ *
+ * @private
+ */
 var std0x = [stdZeroMonth, stdZeroDay, stdZeroHour12, stdZeroMinute, stdZeroSecond, stdYear];
 
-// startsWithLowerCase reports whether the string has a lower-case letter at the beginning.
-// Its purpose is to prevent matching strings like "Month" when looking for "Mon".
+/**
+ * startsWithLowerCase reports whether the string has a lower-case letter at the beginning.
+ * Its purpose is to prevent matching strings like "Month" when looking for "Mon".
+ *
+ * @private
+ */
 var startsWithLowerCase = function(str) {
   internal.areStrings([str]);
   if (str.length === 0) {
@@ -1962,7 +2143,11 @@ var startsWithLowerCase = function(str) {
   return 'a' <= c && c <= 'z';
 };
 
-// isDigit reports whether s[i] is in range and is a decimal digit.
+/**
+ * isDigit reports whether s[i] is in range and is a decimal digit.
+ *
+ * @private
+ */
 var isDigit = function(s, i) {
   internal.areStrings([s]);
   internal.isInteger(i);
@@ -1973,8 +2158,12 @@ var isDigit = function(s, i) {
   return '0' <= c && c <= '9';
 };
 
-// nextStdChunk finds the first occurrence of a std string in
-// layout and returns the text before, the std string, and the text after.
+/**
+ * nextStdChunk finds the first occurrence of a std string in
+ * layout and returns the text before, the std string, and the text after.
+ *
+ * @private
+ */
 var nextStdChunk = function(layout) {
   internal.areStrings([layout]);
   for (var i = 0; i < layout.length; i++) {
@@ -2018,7 +2207,7 @@ var nextStdChunk = function(layout) {
       return [layout.slice(0, i), stdDay, layout.slice(i+1)];
     } else if (c === '_') { // _2, _2006
       if (layout.length >= i+2 && layout[i+1] === '2') {
-        //_2006 is really a literal _, followed by stdLongYear
+        /// 2006 is really a literal _, followed by stdLongYear
         if (layout.length >= i+5 && layout.slice(i+1, i+5) === "2006") {
           return [layout.slice(0, i+1), stdLongYear, layout.slice(i+5)];
         }
@@ -2077,7 +2266,7 @@ var nextStdChunk = function(layout) {
         while (j < layout.length && layout[j] === ch) {
           j++;
         }
-        // String of digits must end here - only fractional second is all digits.
+        /// String of digits must end here - only fractional second is all digits.
         if (!isDigit(layout, j)) {
           var std = stdFracSecond0;
           if (layout[i+1] === '9') {
@@ -2164,7 +2353,7 @@ var _parse = function(layout, value, defaultLocation, local) {
         rangeErrString = "month"; // TODO try/catch and rethrow with this val
       }
     } else if (mask === stdWeekDay) {
-      // Ignore weekday except for error checking.
+      /// Ignore weekday except for error checking.
       var results = lookup(shortDayNames, value);
       value = results[1];
     } else if (mask === stdLongWeekDay) {
@@ -2177,7 +2366,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       var results = getnum(value, std === stdZeroDay);
       day = results[0], value = results[1];
       if (day < 0) {
-        // Note that we allow any one- or two-digit day here.
+        /// Note that we allow any one- or two-digit day here.
         rangeErrString = "day"; // TODO
       }
     } else if (mask === stdHour) {
@@ -2204,17 +2393,17 @@ var _parse = function(layout, value, defaultLocation, local) {
       if (sec < 0 || 60 < sec) {
         rangeErrString = "second";
       }
-      // Special case: do we have a fractional second but no
-      // fractional second in the format?
+      /// Special case: do we have a fractional second but no
+      /// fractional second in the format?
       if (value.length >= 2 && value[0] === '.' && isDigit(value, 1)) {
         var results = nextStdChunk(layout);
         std = results[1];
         std = std & stdMask;
         if (std === stdFracSecond0 || std === stdFracSecond9) {
-          // Fractional second in the layout; proceed normally
-          // this is a break out of the switch stmt; can't do that so use else.
+          /// Fractional second in the layout; proceed normally
+          /// this is a break out of the switch stmt; can't do that so use else.
         } else {
-          // No fractional second in the layout but we have one in the input.
+          /// No fractional second in the layout but we have one in the input.
           var n = 2;
           for (; n < value.length && isDigit(value, n); n++) {
           }
@@ -2256,7 +2445,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       if ((std === stdISO8601TZ || std === stdISO8601ShortTZ || std === stdISO8601ColonTZ) && value.length >= 1 && value[0] === 'Z') {
         value = value.slice(1);
         z = location.UTC;
-        // This is a break stmt in the original source but we can't break
+        /// This is a break stmt in the original source but we can't break
       } else {
         var sign, hours, mins, seconds;
         if (std === stdISO8601ColonTZ || std === stdNumColonTZ) {
@@ -2318,13 +2507,13 @@ var _parse = function(layout, value, defaultLocation, local) {
         if (sign[0] === '-') {
           zoneOffset = -zoneOffset;
         } else if (sign[0] === '+') {
-          // ok
+          /// ok
         } else {
           throw errBad;
         }
       }
     } else if (mask === stdTZ) {
-      // Does it look like a time zone?
+      /// Does it look like a time zone?
       if (value.length >= 3 && value.slice(0, 3) === "UTC") {
         z = location.UTC;
         value = value.slice(3);
@@ -2333,8 +2522,8 @@ var _parse = function(layout, value, defaultLocation, local) {
       var n = parseTimeZone(value);
       zoneName = value.slice(0, n), value = value.slice(n);
     } else if (mask === stdFracSecond0) {
-      // stdFracSecond0 requires the exact number of digits as specified in
-      // the layout.
+      /// stdFracSecond0 requires the exact number of digits as specified in
+      /// the layout.
       var ndigit = 1 + (std >> stdArgShift);
       if (value.length < ndigit) {
         throw errBad;
@@ -2344,20 +2533,19 @@ var _parse = function(layout, value, defaultLocation, local) {
       value = value.slice(ndigit);
     } else if (mask === stdFracSecond9) {
       if (value.length < 2 || value[0] !== '.' || value[1] < '0' || '9' < value[1]) {
-        // Fractional second omitted. Original Go code has a break, we can't do
-        // that.
-        // break
-      } else {
-        // Take any number of digits, even more than asked for,
-        // because it is what the stdSecond case would do.
-        var i = 0;
-        while (i < 9 && i+1 < value.length && '0' <= value[i+1] && value[i+1] <= '9') {
-          i++;
-        }
-        var results = parseNanoseconds(value, 1+i);
-        nsec = results[0], rangeErrString = results[1];
-        value = value.slice(1+i);
+        /// Fractional second omitted. Original Go code has a break, we can't do
+        /// that.
+        break
       }
+      /// Take any number of digits, even more than asked for,
+      /// because it is what the stdSecond case would do.
+      var i = 0;
+      while (i < 9 && i+1 < value.length && '0' <= value[i+1] && value[i+1] <= '9') {
+        i++;
+      }
+      var results = parseNanoseconds(value, 1+i);
+      nsec = results[0], rangeErrString = results[1];
+      value = value.slice(1+i);
     }
     if (rangeErrString !== "") {
       throw new ParseError(alayout, avalue, stdstr, value, ": " + rangeErrString + " out of range");
@@ -2369,7 +2557,7 @@ var _parse = function(layout, value, defaultLocation, local) {
     hour = 0;
   }
 
-  // Validate the day of the month.
+  /// Validate the day of the month.
   if (day < 1 || day > daysIn((new Month(month)), year)) {
     throw new ParseError(alayout, avalue, "", value, ": day out of range");
   }
@@ -2383,8 +2571,8 @@ var _parse = function(layout, value, defaultLocation, local) {
     var o = Int64.from(zoneOffset);
     t._addSec(o.muln(-1));
 
-    // Look for local zone with the given offset.
-    // If that zone was in effect at the given time, use it.
+    /// Look for local zone with the given offset.
+    /// If that zone was in effect at the given time, use it.
     var results = local._lookup(t._unixSec());
     var name = results[0], offset = results[1];
     if (offset === zoneOffset && (zoneName === "" || name === zoneName)) {
@@ -2392,15 +2580,15 @@ var _parse = function(layout, value, defaultLocation, local) {
       return t;
     }
 
-    // Otherwise create fake zone to record offset.
+    /// Otherwise create fake zone to record offset.
     t._setLoc(location.fixedZone(zoneName, zoneOffset));
     return t;
   }
 
   if (zoneName !== "") {
     var t = _date(year, new Month(month), day, hour, min, sec, nsec, location.UTC);
-    // Look for local zone with the given offset.
-    // If that zone was in effect at the given time, use it.
+    /// Look for local zone with the given offset.
+    /// If that zone was in effect at the given time, use it.
     var offset = 0;
     try {
       offset = local._lookupName(zoneName, t._unixSec());
@@ -2410,7 +2598,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       return t;
     } catch (e) { internal.throwSystem(e); /* otherwise fall through to below */ }
 
-    // Otherwise, create fake zone with unknown offset.
+    /// Otherwise, create fake zone with unknown offset.
     if (zoneName.length > 3 && zoneName.slice(0, 3) === "GMT") {
       offset = atoi(zoneName.slice(3)); // Guaranteed OK by parseGMT.
       internal.isInteger(offset);
