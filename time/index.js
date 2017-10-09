@@ -26,6 +26,9 @@ var ord = function(s) {
 };
 
 const zero = ord('0');
+var a = ord('a');
+var A = ord('A');
+var z = ord('z');
 var time = {};
 
 /**
@@ -301,6 +304,104 @@ var minDuration = new Duration(internal.Int64.from(-1).shln(63));
 var maxDuration = new Duration(internal.Int64.from(1).shln(63).subn(1));
 
 /**
+ * _daysBefore[m] counts the number of days in a non-leap year
+ * before month m begins. There is an entry for m=12, counting
+ * the number of days before January of next year (365).
+ *
+ * @private
+ */
+var _daysBefore = [
+  0,
+  31,
+  31 + 28,
+  31 + 28 + 31,
+  31 + 28 + 31 + 30,
+  31 + 28 + 31 + 30 + 31,
+  31 + 28 + 31 + 30 + 31 + 30,
+  31 + 28 + 31 + 30 + 31 + 30 + 31,
+  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
+  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
+  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
+  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30,
+  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31,
+];
+
+var months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+var January, December;
+
+/**
+ * A Month specifies a month of the year (January = 1, ...). Compare Month
+ * objects using a.month === b.month or a.equal(b);
+ *
+ * @class
+ * @param {integer} m Month (1-indexed month)
+ */
+class Month {
+  constructor(i) {
+    internal.isInteger(i);
+    this.month = i;
+  };
+
+  /**
+   * Equal returns true if the current month and b are equal.
+   *
+   * @param {integer} b Month Month object.
+   */
+  equal(b) {
+    if (b instanceof Month === false) {
+      throw new Error("not comparing to a month object: " + JSON.stringify(b));
+    }
+    return this.month === b.month;
+  };
+
+  /**
+   * toString returns a string for the given Month ("February")
+   */
+  toString() {
+    var m = this.month;
+    if (January.month <= m && m <= December.month) {
+      return months[m-1];
+    }
+    var buf = new bytes.Slice(20);
+    var n = fmtInt(buf, buf.length, Uint64.from(m));
+    return "%!Month(" + buf.slice(n) + ")";
+  };
+};
+
+January = new Month(1);
+const February = new Month(2);
+const March = new Month(3);
+const April = new Month(4);
+const May = new Month(5);
+const June = new Month(6);
+const July = new Month(7);
+const August = new Month(8);
+const September = new Month(9);
+const October = new Month(10);
+const November = new Month(11);
+December = new Month(12);
+
+
+var isLeap = function(year) {
+  internal.isInteger(year);
+  return (year%4) === 0 && ((year%100) !== 0 || (year%400) === 0);
+};
+
+/**
  * absDate is like date but operates on an absolute time. yday === day of year
  * returns [year, Month, day, yday];
  *
@@ -475,30 +576,6 @@ const Fri = 4;
 const Sat = 5;
 const Sun = 6;
 
-/**
- * Unix returns the local Time corresponding to the given Unix time,
- * sec seconds and nsec nanoseconds since January 1, 1970 UTC.
- * It is valid to pass nsec outside the range [0, 999999999].
- * Not all sec values have a corresponding time value. One such
- * value is 1<<63-1 (the largest int64 value).
- *
- * @param {Int64} sec Integer number of seconds
- * @param {Int64} nsec Integer number of nanoseconds.
- */
-time.unix = function(sec, nsec) {
-  internal.isInt64(sec);
-  internal.isInt64(nsec);
-  if (nsec.ltn(0) || nsec.gten(1e9)) {
-    var n = nsec.divn(1e9);
-    sec = sec.add(n);
-    nsec = nsec.sub(n.muln(1e9));
-    if (nsec.ltn(0)) {
-      nsec = nsec.addn(1e9);
-      sec = sec.subn(1);
-    }
-  }
-  return unixTime(sec, nsec);
-};
 
 var daysIn = function(m, year) {
   if (m.equal(February) && isLeap(year)) {
@@ -749,21 +826,6 @@ var parseTimeZone = function(value) {
 };
 
 /**
- * ParseInLocation is like Parse but differs in two important ways.
- * First, in the absence of time zone information, Parse interprets a time as UTC;
- * ParseInLocation interprets the time as in the given location.
- * Second, when given a zone offset or abbreviation, Parse tries to match it
- * against the Local location; ParseInLocation uses the given location.
- */
-time.parseInLocation = function(layout, value, loc) {
-  internal.areStrings([layout, value]);
-  if ((loc instanceof location.Location) === false) {
-    throw new Error("time: missing location in call to parseInLocation");
-  }
-  return _parse(layout, value, loc, loc);
-}
-
-/**
  * leadingFraction consumes the leading [0-9]* from s.
  * It is used only for fractions, so does not return an error on overflow,
  * it just stops accumulating precision.
@@ -994,9 +1056,6 @@ var longMonthNames = [
   "December",
 ];
 
-var a = 'a'.charCodeAt(0);
-var A = 'A'.charCodeAt(0);
-var z = 'z'.charCodeAt(0);
 /**
  * norm returns nhi, nlo such that
  * hi * base + lo == nhi * base + nlo
@@ -1018,98 +1077,6 @@ var norm = function(hi, lo, base) {
   }
   return [hi, lo];
 };
-
-/**
- * _daysBefore[m] counts the number of days in a non-leap year
- * before month m begins. There is an entry for m=12, counting
- * the number of days before January of next year (365).
- *
- * @private
- */
-var _daysBefore = [
-  0,
-  31,
-  31 + 28,
-  31 + 28 + 31,
-  31 + 28 + 31 + 30,
-  31 + 28 + 31 + 30 + 31,
-  31 + 28 + 31 + 30 + 31 + 30,
-  31 + 28 + 31 + 30 + 31 + 30 + 31,
-  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
-  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
-  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
-  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30,
-  31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 31,
-];
-
-var months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-var January, December;
-
-/**
- * A Month specifies a month of the year (January = 1, ...). Compare Month
- * objects using a.month === b.month or a.equal(b);
- *
- * @class
- * @param {integer} m Month (1-indexed month)
- */
-class Month {
-  constructor(i) {
-    internal.isInteger(i);
-    this.month = i;
-  };
-
-  /**
-   * Equal returns true if the current month and b are equal.
-   *
-   * @param {integer} b Month Month object.
-   */
-  equal(b) {
-    if (b instanceof Month === false) {
-      throw new Error("not comparing to a month object: " + JSON.stringify(b));
-    }
-    return this.month === b.month;
-  };
-
-  /**
-   * toString returns a string for the given Month ("February")
-   */
-  toString() {
-    var m = this.month;
-    if (January.month <= m && m <= December.month) {
-      return months[m-1];
-    }
-    var buf = new bytes.Slice(20);
-    var n = fmtInt(buf, buf.length, Uint64.from(m));
-    return "%!Month(" + buf.slice(n) + ")";
-  };
-};
-
-January = new Month(1);
-const February = new Month(2);
-const March = new Month(3);
-const April = new Month(4);
-const May = new Month(5);
-const June = new Month(6);
-const July = new Month(7);
-const August = new Month(8);
-const September = new Month(9);
-const October = new Month(10);
-const November = new Month(11);
-December = new Month(12);
 
 var days = [
   "Sunday",
@@ -1161,10 +1128,281 @@ var absWeekday = function(abs) {
   return new Weekday(s3.toNumber());
 };
 
-var isLeap = function(year) {
-  internal.isInteger(year);
-  return (year%4) === 0 && ((year%100) !== 0 || (year%400) === 0);
+/// tab []string, val string
+var lookup = function(tab, val) {
+  for (var i = 0; i < tab.length; i++) {
+    var v = tab[i];
+    if (val.length >= v.length && match(val.slice(0, v.length), v)) {
+      return [i, val.slice(v.length)];
+    }
+  }
+  throw errBad;
 };
+
+var cutspace = function(s) {
+  internal.areStrings([s]);
+  while (s.length > 0 && s[0] === ' ') {
+    s = s.slice(1);
+  }
+  return s;
+};
+
+/**
+ * isDigit reports whether s[i] is in range and is a decimal digit.
+ *
+ * @private
+ */
+var isDigit = function(s, i) {
+  internal.isString(s);
+  internal.isInteger(i);
+  if (s.length <= i) {
+    return false;
+  }
+  var c = s[i];
+  return '0' <= c && c <= '9';
+};
+
+/**
+ * getnum parses s[0:1] or s[0:2] (fixed forces the latter)
+ * as a decimal integer and returns the integer and the
+ * remainder of the string.
+ *
+ * @private
+ */
+var getnum = function(s, fixed) {
+  internal.isString(s);
+  internal.isBool(fixed);
+  if (isDigit(s, 0) === false) {
+    throw errBad;
+  }
+  if (isDigit(s, 1) === false) {
+    if (fixed === true) {
+      return 0, s, errBad;
+    }
+    return [s[0].charCodeAt(0) - '0'.charCodeAt(0), s.slice(1)];
+  }
+  var diff = s[0].charCodeAt(0) - '0'.charCodeAt(0);
+  var diff1 = s[1].charCodeAt(0) - '0'.charCodeAt(0);
+  return [diff*10 + diff1, s.slice(2)];
+};
+
+/**
+ * skip removes the given prefix from value,
+ * treating runs of space characters as equivalent.
+ *
+ * @private
+ */
+var skip = function(value, prefix) {
+  internal.areStrings([value, prefix]);
+  while (prefix.length > 0) {
+    if (prefix[0] === ' ') {
+      if (value.length > 0 && value[0] !== ' ') {
+        throw errBad;
+      }
+      prefix = cutspace(prefix);
+      value = cutspace(value);
+      continue;
+    }
+    if (value.length === 0 || value[0] !== prefix[0]) {
+      throw errBad;
+    }
+    prefix = prefix.slice(1);
+    value = value.slice(1);
+  }
+  return value;
+};
+
+const stdNeedDate = 1 << 8;
+const stdLongMonth = 1 + stdNeedDate;    // "January"
+const stdMonth = 2 + stdNeedDate;        // "Jan"
+const stdNumMonth = 3 + stdNeedDate;     // "1"
+const stdZeroMonth = 4 + stdNeedDate;    // "01"
+const stdLongWeekDay = 5 + stdNeedDate;  // "Monday"
+const stdWeekDay = 6 + stdNeedDate;      // "Mon"
+const stdDay = 7 + stdNeedDate;          // "2"
+const stdUnderDay = 8 + stdNeedDate;     // "_2"
+const stdZeroDay = 9 + stdNeedDate;      // "02"
+
+const stdNeedClock = 2 << 8; // 512
+const stdHour = 10 + stdNeedClock;                // 522; "15"
+const stdHour12 = 11 + stdNeedClock;              // "3"
+const stdZeroHour12 = 12 + stdNeedClock;          // "03"
+const stdMinute = 13 + stdNeedClock;              // 525; "4"
+const stdZeroMinute = 14 + stdNeedClock;          // "04"
+const stdSecond = 15 + stdNeedClock;              // "5"
+const stdZeroSecond = 16 + stdNeedClock;          // 528; "05"
+
+const stdLongYear = 17 + stdNeedDate;    // "2006"
+const stdYear = 18 + stdNeedDate;        // "06"
+
+const stdPM = 19 + stdNeedClock;                  // "PM"
+const stdpm = 20 + stdNeedClock;                  // "pm"
+
+const stdTZ = 21;                                 // "MST"
+const stdISO8601TZ = 22;                          // "Z0700"  // prints Z for UTC
+const stdISO8601SecondsTZ = 23;                   // "Z070000"
+const stdISO8601ShortTZ = 24;                     // "Z07"
+const stdISO8601ColonTZ = 25;                     // "Z07:00" // prints Z for UTC
+const stdISO8601ColonSecondsTZ = 26;              // "Z07:00:00"
+const stdNumTZ = 27;                              // "-0700"  // always numeric
+const stdNumSecondsTz = 28;                       // "-070000"
+const stdNumShortTZ = 29;                         // "-07"    // always numeric
+const stdNumColonTZ = 30;                         // "-07:00" // always numeric
+const stdNumColonSecondsTZ = 31;                  // "-07:00:00"
+const stdFracSecond0 = 32;                        // ".0", ".00", ... , trailing zeros included
+const stdFracSecond9 = 33;                        // ".9", ".99", ..., trailing zeros omitted
+
+const stdArgShift  = 16;                 // extra argument in high bits, above low stdArgShift
+const stdMask      = (1<<stdArgShift) - 1; // mask out argument
+
+/**
+ * std0x records the std values for "01", "02", ..., "06".
+ *
+ * @private
+ */
+var std0x = [stdZeroMonth, stdZeroDay, stdZeroHour12, stdZeroMinute, stdZeroSecond, stdYear];
+
+/**
+ * startsWithLowerCase reports whether the string has a lower-case letter at the beginning.
+ * Its purpose is to prevent matching strings like "Month" when looking for "Mon".
+ *
+ * @private
+ */
+var startsWithLowerCase = function(str) {
+  internal.areStrings([str]);
+  if (str.length === 0) {
+    return false;
+  }
+  var c = str[0];
+  return 'a' <= c && c <= 'z';
+};
+
+/**
+ * nextStdChunk finds the first occurrence of a std string in
+ * layout and returns the text before, the std string, and the text after.
+ *
+ * @private
+ */
+var nextStdChunk = function(layout) {
+  internal.areStrings([layout]);
+  for (var i = 0; i < layout.length; i++) {
+    var c = layout[i];
+    if (c === 'J') { // January, Jan
+      if (layout.length >= i+3 && layout.slice(i, i+3) === "Jan") {
+        if (layout.length >= i+7 && layout.slice(i, i+7) === "January") {
+          return [layout.slice(0, i), stdLongMonth, layout.slice(i+7)];
+        }
+        if (!startsWithLowerCase(layout.slice(i+3))) {
+          return [layout.slice(0, i), stdMonth, layout.slice(i+3)];
+        }
+      }
+    } else if (c === 'M') { // Monday, Mon, MST
+      if (layout.length >= i+3) {
+        if (layout.slice(i, i+3) === "Mon") {
+          if (layout.length >= i+6 && layout.slice(i, i+6) === "Monday") {
+            return [layout.slice(0, i), stdLongWeekDay, layout.slice(i+6)];
+          }
+          if (startsWithLowerCase(layout.slice(i+3)) === false) {
+            return [layout.slice(0, i), stdWeekDay, layout.slice(i+3)];
+          }
+        }
+        if (layout.slice(i, i+3) === "MST") {
+          return [layout.slice(0, i), stdTZ, layout.slice(i+3)];
+        }
+      }
+    } else if (c === '0') { // 01, 02, 03, 04, 05, 06
+      if (layout.length >= i+2 && '1' <= layout[i+1] && layout[i+1] <= '6') {
+        return [layout.slice(0,i), std0x[layout[i+1]-'1'], layout.slice(i+2)];
+      }
+    } else if (c === '1') { // 15, 1
+      if (layout.length >= i+2 && layout[i+1] === '5') {
+        return [layout.slice(0, i), stdHour, layout.slice(i+2)];
+      }
+      return [layout.slice(0, i), stdNumMonth, layout.slice(i+1)];
+    } else if (c === '2') { // 2006, 2
+      if (layout.length >= i+4 && layout.slice(i, i+4) === "2006") {
+        return [layout.slice(0, i), stdLongYear, layout.slice(i+4)];
+      }
+      return [layout.slice(0, i), stdDay, layout.slice(i+1)];
+    } else if (c === '_') { // _2, _2006
+      if (layout.length >= i+2 && layout[i+1] === '2') {
+        /// 2006 is really a literal _, followed by stdLongYear
+        if (layout.length >= i+5 && layout.slice(i+1, i+5) === "2006") {
+          return [layout.slice(0, i+1), stdLongYear, layout.slice(i+5)];
+        }
+        return [layout.slice(0, i), stdUnderDay, layout.slice(i+2)];
+      }
+    } else if (c === '3') {
+      return [layout.slice(0, i), stdHour12, layout.slice(i+1)];
+    } else if (c === '4') {
+      return [layout.slice(0, i), stdMinute, layout.slice(i+1)];
+    } else if (c === '5') {
+      return [layout.slice(0, i), stdSecond, layout.slice(i+1)];
+    } else if (c === 'P') { // PM
+      if (layout.length >= i+2 && layout[i+1] === 'M') {
+        return [layout.slice(0, i), stdPM, layout.slice(i+2)];
+      }
+    } else if (c === 'p') { // pm
+      if (layout.length >= i+2 && layout[i+1] === 'm') {
+        return [layout.slice(0, i), stdpm, layout.slice(i+2)];
+      }
+    } else if (c === '-') { // -070000, -07:00:00, -0700, -07:00, -07
+      if (layout.length >= i+7 && layout.slice(i, i+7) === "-070000") {
+        return [layout.slice(0, i), stdNumSecondsTz, layout.slice(i+7)];
+      }
+      if (layout.length >= i+9 && layout.slice(i, i+9) === "-07:00:00") {
+        return [layout.slice(0, i), stdNumColonSecondsTZ, layout.slice(i+9)];
+      }
+      if (layout.length >= i+5 && layout.slice(i, i+5) === "-0700") {
+        return [layout.slice(0, i), stdNumTZ, layout.slice(i+5)];
+      }
+      if (layout.length >= i+6 && layout.slice(i, i+6) === "-07:00") {
+        return [layout.slice(0, i), stdNumColonTZ, layout.slice(i+6)];
+      }
+      if (layout.length >= i+3 && layout.slice(i, i+3) === "-07") {
+        return [layout.slice(0, i), stdNumShortTZ, layout.slice(i+3)];
+      }
+    } else if (c === 'Z') { // Z070000, Z07:00:00, Z0700, Z07:00,
+      if (layout.length >= i+7 && layout.slice(i, i+7) === "Z070000") {
+        return [layout.slice(0, i), stdISO8601SecondsTZ, layout.slice(i+7)];
+      }
+      if (layout.length >= i+9 && layout.slice(i, i+9) === "Z07:00:00") {
+        return [layout.slice(0, i), stdISO8601ColonSecondsTZ, layout.slice(i+9)];
+      }
+      if (layout.length >= i+5 && layout.slice(i, i+5) === "Z0700") {
+        return [layout.slice(0, i), stdISO8601TZ, layout.slice(i+5)];
+      }
+      if (layout.length >= i+6 && layout.slice(i, i+6) === "Z07:00") {
+        return [layout.slice(0, i), stdISO8601ColonTZ, layout.slice(i+6)];
+      }
+      if (layout.length >= i+3 && layout.slice(i, i+3) === "Z07") {
+        return [layout.slice(0, i), stdISO8601ShortTZ, layout.slice(i+3)];
+      }
+    } else if (c === '.') { // .000 or .999 - repeated digits for fractional seconds.
+      if (i+1 < layout.length && (layout[i+1] === '0' || layout[i+1] === '9')) {
+        var ch = layout[i+1];
+        var j = i + 1;
+        while (j < layout.length && layout[j] === ch) {
+          j++;
+        }
+        /// String of digits must end here - only fractional second is all digits.
+        if (!isDigit(layout, j)) {
+          var std = stdFracSecond0;
+          if (layout[i+1] === '9') {
+            std = stdFracSecond9;
+          }
+          std = std | ((j - (i + 1)) << stdArgShift);
+          return [layout.slice(0, i), std, layout.slice(j)];
+        }
+      }
+    }
+  }
+  return [layout, 0, ""];
+};
+
+/// _date is used inside of the Time class, so define a stub and then redefine
+/// it
+var _date = function() {};
 
 /**
  * A Time represents an instant in time with nanosecond precision.
@@ -1940,6 +2178,31 @@ var _now = function() {
 };
 
 /**
+ * Unix returns the local Time corresponding to the given Unix time,
+ * sec seconds and nsec nanoseconds since January 1, 1970 UTC.
+ * It is valid to pass nsec outside the range [0, 999999999].
+ * Not all sec values have a corresponding time value. One such
+ * value is 1<<63-1 (the largest int64 value).
+ *
+ * @param {Int64} sec Integer number of seconds
+ * @param {Int64} nsec Integer number of nanoseconds.
+ */
+time.unix = function(sec, nsec) {
+  internal.isInt64(sec);
+  internal.isInt64(nsec);
+  if (nsec.ltn(0) || nsec.gten(1e9)) {
+    var n = nsec.divn(1e9);
+    sec = sec.add(n);
+    nsec = nsec.sub(n.muln(1e9));
+    if (nsec.ltn(0)) {
+      nsec = nsec.addn(1e9);
+      sec = sec.subn(1);
+    }
+  }
+  return unixTime(sec, nsec);
+};
+
+/**
  * Date returns the Time corresponding to
  *	yyyy-mm-dd hh:mm:ss + nsec nanoseconds
  * in the appropriate zone for that time in the given location.
@@ -1960,7 +2223,7 @@ var _now = function() {
  *
  * @private
  */
-var _date = function(year, month, day, hour, min, sec, nsec, loc) {
+_date = function(year, month, day, hour, min, sec, nsec, loc) {
   internal.areIntegers([year, day, hour, min, sec, nsec]);
   if ((loc instanceof location.Location) === false) {
     throw new Error("time: missing location in call to Date");
@@ -2041,277 +2304,6 @@ var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   var t = unixTime(unix, Int64.from(nsec));
   t._setLoc(loc);
   return t;
-};
-
-/// tab []string, val string
-var lookup = function(tab, val) {
-  for (var i = 0; i < tab.length; i++) {
-    var v = tab[i];
-    if (val.length >= v.length && match(val.slice(0, v.length), v)) {
-      return [i, val.slice(v.length)];
-    }
-  }
-  throw errBad;
-};
-
-var cutspace = function(s) {
-  internal.areStrings([s]);
-  while (s.length > 0 && s[0] === ' ') {
-    s = s.slice(1);
-  }
-  return s;
-};
-
-/**
- * getnum parses s[0:1] or s[0:2] (fixed forces the latter)
- * as a decimal integer and returns the integer and the
- * remainder of the string.
- *
- * @private
- */
-var getnum = function(s, fixed) {
-  internal.isBool(fixed);
-  if (isDigit(s, 0) === false) {
-    throw errBad;
-  }
-  if (isDigit(s, 1) === false) {
-    if (fixed === true) {
-      return 0, s, errBad;
-    }
-    return [s[0].charCodeAt(0) - '0'.charCodeAt(0), s.slice(1)];
-  }
-  var diff = s[0].charCodeAt(0) - '0'.charCodeAt(0);
-  var diff1 = s[1].charCodeAt(0) - '0'.charCodeAt(0);
-  return [diff*10 + diff1, s.slice(2)];
-};
-
-/**
- * skip removes the given prefix from value,
- * treating runs of space characters as equivalent.
- *
- * @private
- */
-var skip = function(value, prefix) {
-  internal.areStrings([value, prefix]);
-  while (prefix.length > 0) {
-    if (prefix[0] === ' ') {
-      if (value.length > 0 && value[0] !== ' ') {
-        throw errBad;
-      }
-      prefix = cutspace(prefix);
-      value = cutspace(value);
-      continue;
-    }
-    if (value.length === 0 || value[0] !== prefix[0]) {
-      throw errBad;
-    }
-    prefix = prefix.slice(1);
-    value = value.slice(1);
-  }
-  return value;
-};
-
-const stdNeedDate = 1 << 8;
-const stdLongMonth = 1 + stdNeedDate;    // "January"
-const stdMonth = 2 + stdNeedDate;        // "Jan"
-const stdNumMonth = 3 + stdNeedDate;     // "1"
-const stdZeroMonth = 4 + stdNeedDate;    // "01"
-const stdLongWeekDay = 5 + stdNeedDate;  // "Monday"
-const stdWeekDay = 6 + stdNeedDate;      // "Mon"
-const stdDay = 7 + stdNeedDate;          // "2"
-const stdUnderDay = 8 + stdNeedDate;     // "_2"
-const stdZeroDay = 9 + stdNeedDate;      // "02"
-
-const stdNeedClock = 2 << 8; // 512
-const stdHour = 10 + stdNeedClock;                // 522; "15"
-const stdHour12 = 11 + stdNeedClock;              // "3"
-const stdZeroHour12 = 12 + stdNeedClock;          // "03"
-const stdMinute = 13 + stdNeedClock;              // 525; "4"
-const stdZeroMinute = 14 + stdNeedClock;          // "04"
-const stdSecond = 15 + stdNeedClock;              // "5"
-const stdZeroSecond = 16 + stdNeedClock;          // 528; "05"
-
-const stdLongYear = 17 + stdNeedDate;    // "2006"
-const stdYear = 18 + stdNeedDate;        // "06"
-
-const stdPM = 19 + stdNeedClock;                  // "PM"
-const stdpm = 20 + stdNeedClock;                  // "pm"
-
-const stdTZ = 21;                                 // "MST"
-const stdISO8601TZ = 22;                          // "Z0700"  // prints Z for UTC
-const stdISO8601SecondsTZ = 23;                   // "Z070000"
-const stdISO8601ShortTZ = 24;                     // "Z07"
-const stdISO8601ColonTZ = 25;                     // "Z07:00" // prints Z for UTC
-const stdISO8601ColonSecondsTZ = 26;              // "Z07:00:00"
-const stdNumTZ = 27;                              // "-0700"  // always numeric
-const stdNumSecondsTz = 28;                       // "-070000"
-const stdNumShortTZ = 29;                         // "-07"    // always numeric
-const stdNumColonTZ = 30;                         // "-07:00" // always numeric
-const stdNumColonSecondsTZ = 31;                  // "-07:00:00"
-const stdFracSecond0 = 32;                        // ".0", ".00", ... , trailing zeros included
-const stdFracSecond9 = 33;                        // ".9", ".99", ..., trailing zeros omitted
-
-const stdArgShift  = 16;                 // extra argument in high bits, above low stdArgShift
-const stdMask      = (1<<stdArgShift) - 1; // mask out argument
-
-/**
- * std0x records the std values for "01", "02", ..., "06".
- *
- * @private
- */
-var std0x = [stdZeroMonth, stdZeroDay, stdZeroHour12, stdZeroMinute, stdZeroSecond, stdYear];
-
-/**
- * startsWithLowerCase reports whether the string has a lower-case letter at the beginning.
- * Its purpose is to prevent matching strings like "Month" when looking for "Mon".
- *
- * @private
- */
-var startsWithLowerCase = function(str) {
-  internal.areStrings([str]);
-  if (str.length === 0) {
-    return false;
-  }
-  var c = str[0];
-  return 'a' <= c && c <= 'z';
-};
-
-/**
- * isDigit reports whether s[i] is in range and is a decimal digit.
- *
- * @private
- */
-var isDigit = function(s, i) {
-  internal.areStrings([s]);
-  internal.isInteger(i);
-  if (s.length <= i) {
-    return false;
-  }
-  var c = s[i];
-  return '0' <= c && c <= '9';
-};
-
-/**
- * nextStdChunk finds the first occurrence of a std string in
- * layout and returns the text before, the std string, and the text after.
- *
- * @private
- */
-var nextStdChunk = function(layout) {
-  internal.areStrings([layout]);
-  for (var i = 0; i < layout.length; i++) {
-    var c = layout[i];
-    if (c === 'J') { // January, Jan
-      if (layout.length >= i+3 && layout.slice(i, i+3) === "Jan") {
-        if (layout.length >= i+7 && layout.slice(i, i+7) === "January") {
-          return [layout.slice(0, i), stdLongMonth, layout.slice(i+7)];
-        }
-        if (!startsWithLowerCase(layout.slice(i+3))) {
-          return [layout.slice(0, i), stdMonth, layout.slice(i+3)];
-        }
-      }
-    } else if (c === 'M') { // Monday, Mon, MST
-      if (layout.length >= i+3) {
-        if (layout.slice(i, i+3) === "Mon") {
-          if (layout.length >= i+6 && layout.slice(i, i+6) === "Monday") {
-            return [layout.slice(0, i), stdLongWeekDay, layout.slice(i+6)];
-          }
-          if (startsWithLowerCase(layout.slice(i+3)) === false) {
-            return [layout.slice(0, i), stdWeekDay, layout.slice(i+3)];
-          }
-        }
-        if (layout.slice(i, i+3) === "MST") {
-          return [layout.slice(0, i), stdTZ, layout.slice(i+3)];
-        }
-      }
-    } else if (c === '0') { // 01, 02, 03, 04, 05, 06
-      if (layout.length >= i+2 && '1' <= layout[i+1] && layout[i+1] <= '6') {
-        return [layout.slice(0,i), std0x[layout[i+1]-'1'], layout.slice(i+2)];
-      }
-    } else if (c === '1') { // 15, 1
-      if (layout.length >= i+2 && layout[i+1] === '5') {
-        return [layout.slice(0, i), stdHour, layout.slice(i+2)];
-      }
-      return [layout.slice(0, i), stdNumMonth, layout.slice(i+1)];
-    } else if (c === '2') { // 2006, 2
-      if (layout.length >= i+4 && layout.slice(i, i+4) === "2006") {
-        return [layout.slice(0, i), stdLongYear, layout.slice(i+4)];
-      }
-      return [layout.slice(0, i), stdDay, layout.slice(i+1)];
-    } else if (c === '_') { // _2, _2006
-      if (layout.length >= i+2 && layout[i+1] === '2') {
-        /// 2006 is really a literal _, followed by stdLongYear
-        if (layout.length >= i+5 && layout.slice(i+1, i+5) === "2006") {
-          return [layout.slice(0, i+1), stdLongYear, layout.slice(i+5)];
-        }
-        return [layout.slice(0, i), stdUnderDay, layout.slice(i+2)];
-      }
-    } else if (c === '3') {
-      return [layout.slice(0, i), stdHour12, layout.slice(i+1)];
-    } else if (c === '4') {
-      return [layout.slice(0, i), stdMinute, layout.slice(i+1)];
-    } else if (c === '5') {
-      return [layout.slice(0, i), stdSecond, layout.slice(i+1)];
-    } else if (c === 'P') { // PM
-      if (layout.length >= i+2 && layout[i+1] === 'M') {
-        return [layout.slice(0, i), stdPM, layout.slice(i+2)];
-      }
-    } else if (c === 'p') { // pm
-      if (layout.length >= i+2 && layout[i+1] === 'm') {
-        return [layout.slice(0, i), stdpm, layout.slice(i+2)];
-      }
-    } else if (c === '-') { // -070000, -07:00:00, -0700, -07:00, -07
-      if (layout.length >= i+7 && layout.slice(i, i+7) === "-070000") {
-        return [layout.slice(0, i), stdNumSecondsTz, layout.slice(i+7)];
-      }
-      if (layout.length >= i+9 && layout.slice(i, i+9) === "-07:00:00") {
-        return [layout.slice(0, i), stdNumColonSecondsTZ, layout.slice(i+9)];
-      }
-      if (layout.length >= i+5 && layout.slice(i, i+5) === "-0700") {
-        return [layout.slice(0, i), stdNumTZ, layout.slice(i+5)];
-      }
-      if (layout.length >= i+6 && layout.slice(i, i+6) === "-07:00") {
-        return [layout.slice(0, i), stdNumColonTZ, layout.slice(i+6)];
-      }
-      if (layout.length >= i+3 && layout.slice(i, i+3) === "-07") {
-        return [layout.slice(0, i), stdNumShortTZ, layout.slice(i+3)];
-      }
-    } else if (c === 'Z') { // Z070000, Z07:00:00, Z0700, Z07:00,
-      if (layout.length >= i+7 && layout.slice(i, i+7) === "Z070000") {
-        return [layout.slice(0, i), stdISO8601SecondsTZ, layout.slice(i+7)];
-      }
-      if (layout.length >= i+9 && layout.slice(i, i+9) === "Z07:00:00") {
-        return [layout.slice(0, i), stdISO8601ColonSecondsTZ, layout.slice(i+9)];
-      }
-      if (layout.length >= i+5 && layout.slice(i, i+5) === "Z0700") {
-        return [layout.slice(0, i), stdISO8601TZ, layout.slice(i+5)];
-      }
-      if (layout.length >= i+6 && layout.slice(i, i+6) === "Z07:00") {
-        return [layout.slice(0, i), stdISO8601ColonTZ, layout.slice(i+6)];
-      }
-      if (layout.length >= i+3 && layout.slice(i, i+3) === "Z07") {
-        return [layout.slice(0, i), stdISO8601ShortTZ, layout.slice(i+3)];
-      }
-    } else if (c === '.') { // .000 or .999 - repeated digits for fractional seconds.
-      if (i+1 < layout.length && (layout[i+1] === '0' || layout[i+1] === '9')) {
-        var ch = layout[i+1];
-        var j = i + 1;
-        while (j < layout.length && layout[j] === ch) {
-          j++;
-        }
-        /// String of digits must end here - only fractional second is all digits.
-        if (!isDigit(layout, j)) {
-          var std = stdFracSecond0;
-          if (layout[i+1] === '9') {
-            std = stdFracSecond9;
-          }
-          std = std | ((j - (i + 1)) << stdArgShift);
-          return [layout.slice(0, i), std, layout.slice(j)];
-        }
-      }
-    }
-  }
-  return [layout, 0, ""];
 };
 
 var _parse = function(layout, value, defaultLocation, local) {
@@ -2568,7 +2560,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       if (value.length < 2 || value[0] !== '.' || value[1] < '0' || '9' < value[1]) {
         /// Fractional second omitted. Original Go code has a break, we can't do
         /// that.
-        break
+        break;
       }
       /// Take any number of digits, even more than asked for,
       /// because it is what the stdSecond case would do.
@@ -2641,6 +2633,21 @@ var _parse = function(layout, value, defaultLocation, local) {
     return t;
   }
   return _date(year, new Month(month), day, hour, min, sec, nsec, defaultLocation);
+};
+
+/**
+ * ParseInLocation is like Parse but differs in two important ways.
+ * First, in the absence of time zone information, Parse interprets a time as UTC;
+ * ParseInLocation interprets the time as in the given location.
+ * Second, when given a zone offset or abbreviation, Parse tries to match it
+ * against the Local location; ParseInLocation uses the given location.
+ */
+time.parseInLocation = function(layout, value, loc) {
+  internal.areStrings([layout, value]);
+  if ((loc instanceof location.Location) === false) {
+    throw new Error("time: missing location in call to parseInLocation");
+  }
+  return _parse(layout, value, loc, loc);
 };
 
 var index = {
