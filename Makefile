@@ -52,10 +52,15 @@ $(REPLACER): scripts/comment-replacer/main.go
 replace-comments: $(REPLACER)
 	find . -name 'index.js' -type f | grep -v node_modules | xargs $(REPLACER)
 
-docs:
+./node_modules/.bin/documentation:
 	yarn add --no-lockfile --exact --dev documentation
+
+docs: ./node_modules/.bin/documentation
 
 ci: lint js-test
 
 clean:
 	rm -rf node_modules
+
+build-docs: | ./node_modules/.bin/documentation
+	./node_modules/.bin/documentation readme --readme-file=time/README.md --markdown-toc=true --shallow --section=API time/index.js

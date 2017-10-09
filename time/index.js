@@ -115,6 +115,9 @@ var Second;
 var Minute;
 var Hour;
 
+/**
+ * @class
+ */
 class Duration {
   constructor(u64) {
     this.d = Int64.from(u64);
@@ -127,6 +130,9 @@ class Duration {
     return new Duration(this.d.mul(u64));
   };
 
+  /**
+   *
+   */
   muln(num) {
     return new Duration(this.d.muln(num));
   };
@@ -297,6 +303,8 @@ var maxDuration = new Duration(internal.Int64.from(1).shln(63).subn(1));
 /**
  * absDate is like date but operates on an absolute time. yday === day of year
  * returns [year, Month, day, yday];
+ *
+ * @private
  */
 var absDate = function(abs, full) {
   internal.isBool(full);
@@ -779,9 +787,7 @@ var leadingFraction = function(s) {
       continue;
     }
     if (x.gt(internal.Int64.from(1).shln(63).subn(1).divn(10))) {
-      /**
-       * It's possible for overflow to give a positive number, so take care.
-       */
+      /// It's possible for overflow to give a positive number, so take care.
       overflow = true;
       continue;
     }
@@ -917,6 +923,8 @@ time.parseDuration = function(s) {
 /**
  * match reports whether s1 and s2 match ignoring case.
  * It is assumed s1 and s2 are the same length.
+ *
+ * @private
  */
 var match = function(s1, s2) {
   for (var i = 0; i < s1.length; i++) {
@@ -1158,7 +1166,43 @@ var isLeap = function(year) {
   return (year%4) === 0 && ((year%100) !== 0 || (year%400) === 0);
 };
 
+/**
+ * A Time represents an instant in time with nanosecond precision.
+ *
+ * Time instants can be compared using the before, after, and equal methods. The
+ * `sub` method subtracts two instants, producing a Duration. The `add` method adds a
+ * Time and a Duration, producing a Time.
+ *
+ * The zero value of type Time is January 1, year 1, 00:00:00.000000000 UTC.
+ * As this time is unlikely to come up in practice, the IsZero method gives a
+ * simple way of detecting a time that has not been initialized explicitly.
+ *
+ * Each Time has associated with it a Location, consulted when computing the
+ * presentation form of the time, such as in the Format, Hour, and Year methods.
+ * The methods Local, UTC, and In return a Time with a specific location.
+ * Changing the location in this way changes only the presentation; it does not
+ * change the instant in time being denoted and therefore does not affect the
+ * computations described in earlier paragraphs.
+ *
+ * Time values should not be used as map or database keys without first
+ * guaranteeing that the identical Location has been set for all values,
+ * which can be achieved through use of the UTC or Local method, and that the
+ * monotonic clock reading has been stripped by setting `t = t.round(0)`.
+ * Use t.equal(u) instead of `t == u`, since t.Equal uses the most accurate
+ * comparison available and correctly handles the case when only one of its
+ * arguments has a monotonic clock reading.
+
+ * In addition to the required “wall clock” reading, a Time may contain an
+ * optional reading of the current process's monotonic clock, to provide
+ * additional precision for comparison or subtraction. See the “Monotonic Clocks”
+ * section in the package documentation for details.
+ *
+ * @class
+ */
 class Time {
+  /**
+   * @private
+   */
   constructor(wall, ext, loc) {
     /// uint64
     if (typeof wall === 'undefined' || wall === null) {
@@ -1220,10 +1264,10 @@ class Time {
   };
 
   /**
-   * Sub returns the duration t-u. If the result exceeds the maximum (or minimum)
-   * value that can be stored in a Duration, the maximum (or minimum) duration
-   * will be returned.
-   * To compute t-d for a duration d, use t.Add(-d).
+   * Sub returns the duration t-u. If the result exceeds the maximum (or
+   * minimum) value that can be stored in a Duration, the maximum (or minimum)
+   * duration will be returned.
+   * To compute t-d for a duration d, use `t.add(-d)`.
    */
   sub(u) {
     var t = this._clone();
@@ -1424,18 +1468,14 @@ class Time {
       } else if (mask === stdHour) {
         buf = appendInt(buf, hour, 2);
       } else if (mask === stdHour12) {
-        /**
-         * Noon is 12PM, midnight is 12AM.
-         */
+        /// Noon is 12PM, midnight is 12AM.
         var hr = hour % 12;
         if (hr === 0) {
           hr = 12;
         }
         buf = appendInt(buf, hr, 0);
       } else if (mask === stdZeroHour12) {
-        /**
-         * Noon is 12PM, midnight is 12AM.
-         */
+        /// Noon is 12PM, midnight is 12AM.
         var hr = hour % 12;
         if (hr === 0) {
           hr = 12;
@@ -1586,6 +1626,9 @@ class Time {
     return abs.mod(constants.secondsPerDay.toUnsigned()).div(constants.secondsPerHour.toUnsigned()).toNumber();
   };
 
+  /**
+   * Day returns the day of the month.
+   */
   day() {
     var results = this._date(true);
     return results[2];
@@ -1609,48 +1652,38 @@ class Time {
     var year = results[0].toNumber(), month = results[1], day = results[2], yday = results[3];
     var wday = (this.weekday().day+6) % 7; // weekday but Monday = 0.
 
-    /**
-     * Calculate week as number of Mondays in year up to
-     * and including today, plus 1 because the first week is week 0.
-     * Putting the + 1 inside the numerator as a + 7 keeps the
-     * numerator from being negative, which would cause it to
-     * round incorrectly.
-     */
+    /// Calculate week as number of Mondays in year up to
+    /// and including today, plus 1 because the first week is week 0.
+    /// Putting the + 1 inside the numerator as a + 7 keeps the
+    /// numerator from being negative, which would cause it to
+    /// round incorrectly.
     var week = Math.floor((yday - wday + 7) / 7);
 
-    /**
-     * The week number is now correct under the assumption
-     * that the first Monday of the year is in week 1.
-     * If Jan 1 is a Tuesday, Wednesday, or Thursday, the first Monday
-     * is actually in week 2.
-     */
+    /// The week number is now correct under the assumption
+    /// that the first Monday of the year is in week 1.
+    /// If Jan 1 is a Tuesday, Wednesday, or Thursday, the first Monday
+    /// is actually in week 2.
     var jan1wday = (wday - yday + 7*53) % 7;
     if (Tue <= jan1wday && jan1wday <= Thu) {
       week++;
     }
 
-    /**
-     * If the week number is still 0, we're in early January but in
-     * the last week of last year.
-     */
+    /// If the week number is still 0, we're in early January but in
+    /// the last week of last year.
     if (week === 0) {
       year--;
       week = 52;
-      /**
-       * A year has 53 weeks when Jan 1 or Dec 31 is a Thursday,
-       * meaning Jan 1 of the next year is a Friday
-       * or it was a leap year and Jan 1 of the next year is a Saturday.
-       */
+      /// A year has 53 weeks when Jan 1 or Dec 31 is a Thursday,
+      /// meaning Jan 1 of the next year is a Friday
+      /// or it was a leap year and Jan 1 of the next year is a Saturday.
       if (jan1wday === Fri || (jan1wday === Sat && isLeap(year))) {
         week++;
       }
     }
 
-    /**
-     * December 29 to 31 are in week 1 of next year if
-     * they are after the last Thursday of the year and
-     * December 31 is a Monday, Tuesday, or Wednesday.
-     */
+    /// December 29 to 31 are in week 1 of next year if
+    /// they are after the last Thursday of the year and
+    /// December 31 is a Monday, Tuesday, or Wednesday.
     if (month.equal(December) && day >= 29 && wday < Thu) {
       var dec31wday = (wday + 31 - day) % 7;
       if (Mon <= dec31wday && dec31wday <= Wed) {
@@ -1840,9 +1873,7 @@ class Time {
     }
     var name = ""; // string
     var offset = 0;
-    /**
-     * Avoid function call if we hit the local time cache.
-     */
+    /// Avoid function call if we hit the local time cache.
     var sec = this._unixSec();
     if (l !== location.UTC) {
       if (l.cacheZone !== null && l.cacheStart.lte(sec) && sec.lte(l.cacheEnd)) {
@@ -1926,6 +1957,8 @@ var _now = function() {
  *
  * Date throws an error if loc is nil.
  * year int, month Month, day, hour, min, sec, nsec int, loc *Location
+ *
+ * @private
  */
 var _date = function(year, month, day, hour, min, sec, nsec, loc) {
   internal.areIntegers([year, day, hour, min, sec, nsec]);
