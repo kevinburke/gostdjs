@@ -196,14 +196,14 @@ Months are 1-indexed and constants exist for comparison.
     -   [lten](#lten)
     -   [toString](#tostring)
     -   [truncate](#truncate)
--   [unix](#unix)
--   [Stamp](#stamp)
--   [sleep](#sleep)
--   [parseInLocation](#parseinlocation)
--   [parseDuration](#parseduration)
 -   [Month](#month)
     -   [equal](#equal)
     -   [toString](#tostring-1)
+-   [Stamp](#stamp)
+-   [sleep](#sleep)
+-   [parseDuration](#parseduration)
+-   [unix](#unix)
+-   [parseInLocation](#parseinlocation)
 -   [Time](#time)
     -   [add](#add)
     -   [sub](#sub)
@@ -289,61 +289,6 @@ If m &lt;= 0, Truncate returns d unchanged.
 
 -   `m`  
 
-### unix
-
-Unix returns the local Time corresponding to the given Unix time,
-sec seconds and nsec nanoseconds since January 1, 1970 UTC.
-It is valid to pass nsec outside the range [0, 999999999].
-Not all sec values have a corresponding time value. One such
-value is 1&lt;&lt;63-1 (the largest int64 value).
-
-**Parameters**
-
--   `sec` **Int64** Integer number of seconds
--   `nsec` **Int64** Integer number of nanoseconds.
-
-### Stamp
-
-Handy time stamps.
-
-### sleep
-
-sleep(dur time.Duration, cb function())
-
-Sleep calls cb after at least the duration d. A negative or zero duration
-causes Sleep to return immediately.
-
-**Parameters**
-
--   `dur`  
--   `cb`  
-
-### parseInLocation
-
-ParseInLocation is like Parse but differs in two important ways.
-First, in the absence of time zone information, Parse interprets a time as UTC;
-ParseInLocation interprets the time as in the given location.
-Second, when given a zone offset or abbreviation, Parse tries to match it
-against the Local location; ParseInLocation uses the given location.
-
-**Parameters**
-
--   `layout`  
--   `value`  
--   `loc`  
-
-### parseDuration
-
-ParseDuration parses a duration string.
-A duration string is a possibly signed sequence of
-decimal numbers, each with optional fraction and a unit suffix,
-such as "300ms", "-1.5h" or "2h45m".
-Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-
-**Parameters**
-
--   `s`  
-
 ### Month
 
 A Month specifies a month of the year (January = 1, ...). Compare Month
@@ -365,6 +310,61 @@ Equal returns true if the current month and b are equal.
 #### toString
 
 toString returns a string for the given Month ("February")
+
+### Stamp
+
+Handy time stamps.
+
+### sleep
+
+sleep(dur time.Duration, cb function())
+
+Sleep calls cb after at least the duration d. A negative or zero duration
+causes Sleep to return immediately.
+
+**Parameters**
+
+-   `dur`  
+-   `cb`  
+
+### parseDuration
+
+ParseDuration parses a duration string.
+A duration string is a possibly signed sequence of
+decimal numbers, each with optional fraction and a unit suffix,
+such as "300ms", "-1.5h" or "2h45m".
+Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+**Parameters**
+
+-   `s`  
+
+### unix
+
+Unix returns the local Time corresponding to the given Unix time,
+sec seconds and nsec nanoseconds since January 1, 1970 UTC.
+It is valid to pass nsec outside the range [0, 999999999].
+Not all sec values have a corresponding time value. One such
+value is 1&lt;&lt;63-1 (the largest int64 value).
+
+**Parameters**
+
+-   `sec` **Int64** Integer number of seconds
+-   `nsec` **Int64** Integer number of nanoseconds.
+
+### parseInLocation
+
+ParseInLocation is like Parse but differs in two important ways.
+First, in the absence of time zone information, Parse interprets a time as UTC;
+ParseInLocation interprets the time as in the given location.
+Second, when given a zone offset or abbreviation, Parse tries to match it
+against the Local location; ParseInLocation uses the given location.
+
+**Parameters**
+
+-   `layout`  
+-   `value`  
+-   `loc`  
 
 ### Time
 
