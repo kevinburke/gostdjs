@@ -3,8 +3,17 @@
 This is an attempt to implement useful features of the Go standard library in
 Javascript.
 
-This is written in plain Javascript and doesn't have any dependencies so you
-should be able to run it in lots of places.
+This is written in plain Javascript and doesn't have any dependencies, so it
+should be easy to add to your project.
+
+```
+const time = require('./gostdjs/time/index.js');
+
+const longForm = "Jan 2, 2006 at 3:04pm (MST)";
+var t = time.parse(longForm, "Feb 3, 2013 at 7:54pm (PST)");
+var u = t.sub(time.Hour);
+console.log(u.toString());
+```
 
 ### Types
 
@@ -49,11 +58,6 @@ accepts an int64 or a uint64, those should be converted to the equivalent
 a `Uint64` to an `Int64`, call `toSigned()`, and call `.toUnsigned()` in the
 opposite direction.
 
-### Running the tests
-
-Run `make test`. The tests use the most recent versions of `mocha` and `should`,
-as well as `eslint` for validation.
-
 ### Installation
 
 Copy the source code directly to your project. You should inspect the source
@@ -96,9 +100,12 @@ To convert between strings and their ASCII character equivalents, do
 bytes. To get a Unicode code point at a character, do `'uchar'.codePointAt(0)`,
 which may yield a number larger than 256.
 
-#### Testing
+### Running the tests
 
-To convert tests, switch something like this:
+Run `make test`. The tests use the most recent versions of `mocha` and `should`,
+as well as `eslint` for validation.
+
+To convert tests from Go to Javascript, switch something like this:
 
 ```go
 if d1 != d2 {

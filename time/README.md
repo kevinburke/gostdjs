@@ -228,7 +228,6 @@ Months are 1-indexed and constants exist for comparison.
     -   [unix](#unix-1)
     -   [toJSON](#tojson)
     -   [zone](#zone)
--   [Duration](#duration-1)
 -   [Time](#time-1)
 -   [Location](#location-1)
 -   [UTC](#utc)
@@ -246,9 +245,22 @@ Months are 1-indexed and constants exist for comparison.
 
 ### Duration
 
+A Duration represents the elapsed time between two instants
+as an int64 nanosecond count. The representation limits the
+largest representable duration to approximately 290 years.
+
 **Parameters**
 
 -   `u64`  
+
+**Examples**
+
+```javascript
+var t0 = time.now();
+expensiveCall();
+var t1 = time.now();
+console.log("The call took ", t1.sub(t0).toString(), "to run.");
+```
 
 #### muln
 
@@ -577,21 +589,6 @@ Zone() {name string, offset int}
 
 Zone computes the time zone in effect at time t, returning the abbreviated
 name of the zone (such as "CET") and its offset in seconds east of UTC.
-
-### Duration
-
-A Duration represents the elapsed time between two instants
-as an int64 nanosecond count. The representation limits the
-largest representable duration to approximately 290 years.
-
-**Examples**
-
-```javascript
-var t0 = time.now();
-expensiveCall();
-var t1 = time.now();
-console.log("The call took ", t1.sub(t0).toString(), "to run.");
-```
 
 ### Time
 

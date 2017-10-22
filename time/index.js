@@ -119,7 +119,16 @@ var Minute;
 var Hour;
 
 /**
+ * A Duration represents the elapsed time between two instants
+ * as an int64 nanosecond count. The representation limits the
+ * largest representable duration to approximately 290 years.
+ *
  * @class
+ * @example
+ * var t0 = time.now();
+ * expensiveCall();
+ * var t1 = time.now();
+ * console.log("The call took ", t1.sub(t0).toString(), "to run.");
  */
 class Duration {
   constructor(u64) {
@@ -2658,18 +2667,7 @@ var index = {
   Minute: time.Minute,
   Hour: time.Hour,
 
-  /**
-   * A Duration represents the elapsed time between two instants
-   * as an int64 nanosecond count. The representation limits the
-   * largest representable duration to approximately 290 years.
-   * @class
-   * @example
-   * var t0 = time.now();
-   * expensiveCall();
-   * var t1 = time.now();
-   * console.log("The call took ", t1.sub(t0).toString(), "to run.");
-   */
-  Duration: time.Duration,
+  Duration: Duration,
 
   /**
    * A Time represents an instant in time with nanosecond precision.
