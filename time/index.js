@@ -2560,17 +2560,17 @@ var _parse = function(layout, value, defaultLocation, local) {
       if (value.length < 2 || value[0] !== '.' || value[1] < '0' || '9' < value[1]) {
         /// Fractional second omitted. Original Go code has a break, we can't do
         /// that.
-        break;
+      } else {
+        /// Take any number of digits, even more than asked for,
+        /// because it is what the stdSecond case would do.
+        var i = 0;
+        while (i < 9 && i+1 < value.length && '0' <= value[i+1] && value[i+1] <= '9') {
+          i++;
+        }
+        var results = parseNanoseconds(value, 1+i);
+        nsec = results[0], rangeErrString = results[1];
+        value = value.slice(1+i);
       }
-      /// Take any number of digits, even more than asked for,
-      /// because it is what the stdSecond case would do.
-      var i = 0;
-      while (i < 9 && i+1 < value.length && '0' <= value[i+1] && value[i+1] <= '9') {
-        i++;
-      }
-      var results = parseNanoseconds(value, 1+i);
-      nsec = results[0], rangeErrString = results[1];
-      value = value.slice(1+i);
     }
     if (rangeErrString !== "") {
       throw new ParseError(alayout, avalue, stdstr, value, ": " + rangeErrString + " out of range");
