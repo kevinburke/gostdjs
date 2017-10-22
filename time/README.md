@@ -228,7 +228,6 @@ Months are 1-indexed and constants exist for comparison.
     -   [unix](#unix-1)
     -   [toJSON](#tojson)
     -   [zone](#zone)
--   [Time](#time-1)
 -   [Location](#location-1)
 -   [UTC](#utc)
 -   [Local](#local)
@@ -589,38 +588,6 @@ Zone() {name string, offset int}
 
 Zone computes the time zone in effect at time t, returning the abbreviated
 name of the zone (such as "CET") and its offset in seconds east of UTC.
-
-### Time
-
-A Time represents an instant in time with nanosecond precision.
-
-Time instants can be compared using the before, after, and equal methods.
-The sub method subtracts two instants, producing a Duration.
-The add method adds a Time and a Duration, producing a Time.
-
-The zero value of type Time is January 1, year 1, 00:00:00.000000000 UTC.
-As this time is unlikely to come up in practice, the isZero method gives
-a simple way of detecting a time that has not been initialized explicitly.
-
-Each Time has associated with it a Location, consulted when computing the
-presentation form of the time, such as in the Format, Hour, and Year methods.
-The methods local, utc, and in return a Time with a specific location.
-Changing the location in this way changes only the presentation; it does not
-change the instant in time being denoted and therefore does not affect the
-computations described in earlier paragraphs.
-
-Therefore, Time values should not be used as map or database keys without
-first guaranteeing that the identical Location has been set for all values,
-which can be achieved through use of the UTC or Local method, and that the
-monotonic clock reading has been stripped by setting t = t.round(0). In
-general, prefer t.equal(u) to t == u, since t.equal uses the most accurate
-comparison available and correctly handles the case when only one of its
-arguments has a monotonic clock reading.
-
-In addition to the required “wall clock” reading, a Time may contain an
-optional reading of the current process's monotonic clock, to provide
-additional precision for comparison or subtraction. See the “Monotonic
-Clocks” section in the package documentation for details.
 
 ### Location
 
