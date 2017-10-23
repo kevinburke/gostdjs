@@ -65,6 +65,8 @@ func main() {
 					// documentation-js parses anything with the /** .. */ form
 					// and turns it into a comment. but we don't want comments
 					// inside of a function to be switched.
+					buf.WriteString(l)
+					buf.WriteByte('\n')
 					continue
 				}
 				// if we get here, it's a comment.
