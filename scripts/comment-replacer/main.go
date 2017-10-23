@@ -35,7 +35,6 @@ func main() {
 		scanner := bufio.NewScanner(f)
 		j := -1
 		commentStarted := false
-		//commentStartedLine := j
 		for scanner.Scan() {
 			j++
 			l := scanner.Text()
@@ -66,6 +65,7 @@ func main() {
 					// documentation-js parses anything with the /** .. */ form
 					// and turns it into a comment. but we don't want comments
 					// inside of a function to be switched.
+					continue
 				}
 				// if we get here, it's a comment.
 				if !commentStarted {

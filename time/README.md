@@ -190,6 +190,7 @@ Months are 1-indexed and constants exist for comparison.
 
 #### Table of Contents
 
+-   [Location](#location)
 -   [Duration](#duration)
     -   [muln](#muln)
     -   [ltn](#ltn)
@@ -215,7 +216,7 @@ Months are 1-indexed and constants exist for comparison.
     -   [appendFormat](#appendformat)
     -   [clock](#clock)
     -   [date](#date)
-    -   [location](#location)
+    -   [location](#location-1)
     -   [nanosecond](#nanosecond)
     -   [second](#second)
     -   [minute](#minute)
@@ -228,10 +229,8 @@ Months are 1-indexed and constants exist for comparison.
     -   [unix](#unix-1)
     -   [toJSON](#tojson)
     -   [zone](#zone)
--   [Location](#location-1)
 -   [UTC](#utc)
 -   [Local](#local)
--   [Stamp](#stamp-1)
 -   [date](#date-1)
 -   [fixedZone](#fixedzone)
 -   [loadLocation](#loadlocation)
@@ -241,6 +240,18 @@ Months are 1-indexed and constants exist for comparison.
 -   [parseDuration](#parseduration-1)
 -   [sleep](#sleep-1)
 -   [unix](#unix-2)
+
+### Location
+
+A Location maps time instants to the zone in use at that time. Typically,
+the Location represents the collection of time offsets in use in a
+geographical area, such as CEST and CET for central Europe.
+
+**Parameters**
+
+-   `name`  
+-   `zone`  
+-   `tx`  
 
 ### Duration
 
@@ -589,23 +600,25 @@ Zone() {name string, offset int}
 Zone computes the time zone in effect at time t, returning the abbreviated
 name of the zone (such as "CET") and its offset in seconds east of UTC.
 
-### Location
-
-A Location maps time instants to the zone in use at that time. Typically,
-the Location represents the collection of time offsets in use in a
-geographical area, such as CEST and CET for central Europe.
-
 ### UTC
 
 UTC represents Universal Coordinated Time (UTC).
+
+**Examples**
+
+```javascript
+var t := time.date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
+```
 
 ### Local
 
 Local represents the system's local time zone.
 
-### Stamp
+**Examples**
 
-Handy time stamps.
+```javascript
+var t := time.date(2009, time.November, 10, 23, 0, 0, 0, time.Local)
+```
 
 ### date
 
@@ -637,7 +650,7 @@ Date throws an error if loc is nil.
 -   `min` **integer** 
 -   `sec` **integer** 
 -   `nsec` **integer** 
--   `loc` **[Location](https://developer.mozilla.org/en-US/docs/Web/API/Location)** 
+-   `loc` **[Location](#location)** 
 
 **Examples**
 
@@ -660,7 +673,7 @@ offset (seconds east of UTC).
 -   `name` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The name of the time zone.
 -   `offset` **integer** The offset in seconds east of UTC.
 
-Returns **[Location](https://developer.mozilla.org/en-US/docs/Web/API/Location)** 
+Returns **[Location](#location)** 
 
 ### loadLocation
 
@@ -687,7 +700,7 @@ loadLocation throws an error if the location could not be found.
 
 -   `name` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The name of the location to load.
 
-Returns **[Location](https://developer.mozilla.org/en-US/docs/Web/API/Location)** 
+Returns **[Location](#location)** 
 
 ### now
 
@@ -744,7 +757,7 @@ parse throws an error if the input could not be parsed as a time.
 
 -   `layout` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The layout
 -   `value` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** Value to parse using the layout
--   `loc` **[Location](https://developer.mozilla.org/en-US/docs/Web/API/Location)** Location to parse the value in.
+-   `loc` **[Location](#location)** Location to parse the value in.
 
 **Examples**
 
@@ -781,7 +794,7 @@ against the Local location; ParseInLocation uses the given location.
 
 -   `layout` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** The layout
 -   `value` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** Value to parse using the layout
--   `loc` **[Location](https://developer.mozilla.org/en-US/docs/Web/API/Location)** Location to parse the value in.
+-   `loc` **[Location](#location)** Location to parse the value in.
 
 **Examples**
 

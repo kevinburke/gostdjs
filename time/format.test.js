@@ -7,7 +7,6 @@ require("should");
 
 const internal = require('../internal/index.js');
 const time = require('./index.js');
-const location = require("./location.js"); // avoid using this import
 
 describe("time", function() {
   var formatTests = [
@@ -34,7 +33,7 @@ describe("time", function() {
   ];
 
   before(function() {
-    location._setToPacific();
+    time._setToPacific();
   });
 
   it("format", function() {
