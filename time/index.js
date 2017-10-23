@@ -1260,6 +1260,9 @@ time.StampNano = "Jan _2 15:04:05.000000000";
  *
  * Sleep calls cb after at least the duration d. A negative or zero duration
  * causes Sleep to return immediately.
+ *
+ * @param {Duration} dur Amount of time to sleep for
+ * @param {function} Callback to hit after we have slept for that time
  */
 time.sleep = function(dur, cb) {
   if ((dur instanceof Duration) === false) {
@@ -3557,15 +3560,6 @@ var index = {
    */
   parseDuration: time.parseDuration,
 
-  /**
-   * sleep(dur time.Duration, cb function())
-   *
-   * Sleep calls cb after at least the duration d. A negative or zero duration
-   * causes Sleep to return immediately.
-   *
-   * @param {Duration} dur Amount of time to sleep for
-   * @param {function} Callback to hit after we have slept for that time
-   */
   sleep: time.sleep,
 
   /**

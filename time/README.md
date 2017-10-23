@@ -238,7 +238,6 @@ Months are 1-indexed and constants exist for comparison.
 -   [parse](#parse)
 -   [parseInLocation](#parseinlocation-1)
 -   [parseDuration](#parseduration-1)
--   [sleep](#sleep-1)
 -   [unix](#unix-2)
 
 ### Location
@@ -346,8 +345,9 @@ causes Sleep to return immediately.
 
 **Parameters**
 
--   `dur`  
+-   `dur` **[Duration](#duration)** Amount of time to sleep for
 -   `cb`  
+-   `Callback` **[function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** to hit after we have slept for that time
 
 ### parseDuration
 
@@ -831,18 +831,6 @@ a duration.
 -   `s` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)** Duration to parse
 
 Returns **[Duration](#duration)** 
-
-### sleep
-
-sleep(dur time.Duration, cb function())
-
-Sleep calls cb after at least the duration d. A negative or zero duration
-causes Sleep to return immediately.
-
-**Parameters**
-
--   `dur` **[Duration](#duration)** Amount of time to sleep for
--   `Callback` **[function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)** to hit after we have slept for that time
 
 ### unix
 
