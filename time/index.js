@@ -2,7 +2,6 @@
 // Copyright 2017 The Go Authors. All rights reserved. Use of this source code
 // is governed by a BSD-style license that can be found in the LICENSE file.
 
-///
 /// TODO: I'm not very happy that the entire contents of the source code must be
 /// present in this one file, but I have not been able to find a satisfactory
 /// solution that fits with the provided import rules.
@@ -46,9 +45,8 @@ class lookupResult {
   };
 };
 
-/**
- * Redefined below.
- */
+/// Redefined below.
+var Local;
 var utcLoc;
 
 var initLocal;
@@ -121,10 +119,8 @@ class Location {
       return new lookupResult(zone.name, zone.offset, zone.isDST, alpha, end);
     }
 
-    /**
-     * Binary search for entry with largest time <= sec.
-     * Not using sort.Search to avoid dependencies.
-     */
+    /// Binary search for entry with largest time <= sec.
+    /// Not using sort.Search to avoid dependencies.
     var tx = this.tx;
     var end = omega;
     var lo = 0;
@@ -149,20 +145,20 @@ class Location {
    * (what the given time of day would be in UTC).
    *
    * Returns an int64
+   *
+   * @private
    */
   _lookupName(name, unix) {
     internal.isString(name);
     internal.isInt64(unix);
 
     this._get();
-    /**
-     * First try for a zone with the right name that was actually
-     * in effect at the given time. (In Sydney, Australia, both standard
-     * and daylight-savings time are abbreviated "EST". Using the
-     * offset helps us pick the right one for the given time.
-     * It's not perfect: during the backward transition we might pick
-     * either one.)
-     */
+    /// First try for a zone with the right name that was actually
+    /// in effect at the given time. (In Sydney, Australia, both standard
+    /// and daylight-savings time are abbreviated "EST". Using the
+    /// offset helps us pick the right one for the given time.
+    /// It's not perfect: during the backward transition we might pick
+    /// either one.)
     for (var i = 0; i < this.zone.length; i++) {
       var zone = this.zone[i];
       if (typeof zone === 'undefined') {
@@ -176,9 +172,7 @@ class Location {
       }
     }
 
-    /**
-     * Otherwise fall back to an ordinary name match.
-     */
+    /// Otherwise fall back to an ordinary name match.
     for (var i = 0; i < this.zone.length; i++) {
       var zone = this.zone[i];
       if (zone.name === name) {
@@ -205,18 +199,16 @@ class Location {
    * 3) Otherwise, use the first zone that is not daylight time, if
    *    there is one.
    * 4) Otherwise, use the first zone.
+   *
+   * @private
    */
   _lookupFirstZone() {
-    /**
-     * Case 1.
-     */
+    /// Case 1.
     if (this._firstZoneUsed() === false) {
       return 0;
     }
 
-    /**
-     * Case 2.
-     */
+    /// Case 2.
     if (this.tx.length > 0 && this.zone[this.tx[0].index].isDST === true) {
       for (var zi = l.tx[0].index - 1; zi >= 0; zi--) {
         if (this.zone[zi].isDST === false) {
@@ -225,25 +217,19 @@ class Location {
       }
     }
 
-    /**
-     * Case 3.
-     */
+    /// Case 3.
     for (var zi = 0; zi < this.zone.length; zi++) {
       if (this.zone[zi].isDST === false) {
         return zi;
       }
     }
 
-    /**
-     * Case 4.
-     */
+    /// Case 4.
     return 0;
   };
 
-  /**
-   * firstZoneUsed returns whether the first zone is used by some
-   * transition.
-   */
+  /// firstZoneUsed returns whether the first zone is used by some
+  /// transition.
   _firstZoneUsed() {
     for (var i = 0; i < this.tx.length; i++) {
       var tx = this.tx[i];
@@ -259,7 +245,11 @@ class Location {
   };
 };
 
+/// NB: you must ALWAYS override this using Object.assign, otherwise other
+/// imports will refer to a stale object.
+Local = new Location("Local", [], []);
 utcLoc = new Location("UTC", [], []);
+var UTC = utcLoc;
 
 const two = '2'.charCodeAt(0);
 const three = '3'.charCodeAt(0);
@@ -277,6 +267,8 @@ var byteString = function(buf) {
  * A zone represents a single time zone such as CEST or CET.
  *
  * offset: seconds east of UTC.
+ *
+ * @private
  */
 class zone {
   constructor(name, offset, isDST) {
@@ -291,6 +283,8 @@ class zone {
 
 /**
  * A zoneTrans represents a single time zone transition.
+ *
+ * @private
  */
 class zoneTrans {
   constructor(when, index, isstd, isutc) {
@@ -339,6 +333,8 @@ class data {
 
   /**
    * big4 returns a uint64 (pretending to be a uint32)
+   *
+   * @private
    */
   big4() {
     var p = this.read(4);
@@ -583,7 +579,7 @@ var containsDotDot = function(s) {
 var loadLocation = function(name) {
   internal.isString(name);
   if (name === "" || name === "UTC") {
-    return time.UTC;
+    return UTC;
   }
   if (name === "Local") {
     return Local;
@@ -660,11 +656,6 @@ var setToPacific = function() {
     Object.assign(Local, initTestingZone());
   });
 };
-
-/// NB: you must ALWAYS override this using Object.assign, otherwise other
-/// imports will refer to a stale object.
-var Local = new Location("Local", [], []);
-var UTC = utcLoc;
 
 location = {
   fixedZone: fixedZone,
@@ -3142,9 +3133,7 @@ var _parse = function(layout, value, defaultLocation, local) {
         rangeErrString = "month"; // TODO try/catch and rethrow with this val
       }
     } else if (mask === stdWeekDay) {
-      /**
       /// Ignore weekday except for error checking.
-       */
       var results = lookup(shortDayNames, value);
       value = results[1];
     } else if (mask === stdLongWeekDay) {
@@ -3157,9 +3146,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       var results = getnum(value, std === stdZeroDay);
       day = results[0], value = results[1];
       if (day < 0) {
-        /**
         /// Note that we allow any one- or two-digit day here.
-         */
         rangeErrString = "day"; // TODO
       }
     } else if (mask === stdHour) {
@@ -3372,10 +3359,8 @@ var _parse = function(layout, value, defaultLocation, local) {
     var o = Int64.from(zoneOffset);
     t._addSec(o.muln(-1));
 
-    /**
     /// Look for local zone with the given offset.
     /// If that zone was in effect at the given time, use it.
-     */
     var results = local._lookup(t._unixSec());
     var name = results[0], offset = results[1];
     if (offset === zoneOffset && (zoneName === "" || name === zoneName)) {
@@ -3383,19 +3368,15 @@ var _parse = function(layout, value, defaultLocation, local) {
       return t;
     }
 
-    /**
     /// Otherwise create fake zone to record offset.
-     */
     t._setLoc(fixedZone(zoneName, zoneOffset));
     return t;
   }
 
   if (zoneName !== "") {
     var t = _date(year, new Month(month), day, hour, min, sec, nsec, UTC);
-    /**
     /// Look for local zone with the given offset.
     /// If that zone was in effect at the given time, use it.
-     */
     var offset = 0;
     try {
       offset = local._lookupName(zoneName, t._unixSec());
@@ -3405,9 +3386,7 @@ var _parse = function(layout, value, defaultLocation, local) {
       return t;
     } catch (e) { internal.throwSystem(e); /* otherwise fall through to below */ }
 
-    /**
     /// Otherwise, create fake zone with unknown offset.
-     */
     if (zoneName.length > 3 && zoneName.slice(0, 3) === "GMT") {
       offset = atoi(zoneName.slice(3)); // Guaranteed OK by parseGMT.
       internal.isInteger(offset);
